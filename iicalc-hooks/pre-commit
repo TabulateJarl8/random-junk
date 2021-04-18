@@ -1,0 +1,3 @@
+#!/bin/bash
+python3 -c "from configparser import ConfigParser;config = ConfigParser();config.read('config.ini');config['system']['userversion'] = '{}' if config['system']['userversion'] != '{}' else exit(0); f = open('config.ini', 'w'); config.write(f); f.close();"
+git add config.ini
