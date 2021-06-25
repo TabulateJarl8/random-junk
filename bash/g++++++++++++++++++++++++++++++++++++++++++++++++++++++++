@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+echo "Improved C++ Compile-Time Maker."
+g++ "$1" -o "$2" -static
