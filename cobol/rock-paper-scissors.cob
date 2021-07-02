@@ -52,28 +52,32 @@ PROCEDURE DIVISION.
 			WHEN "scissors"
 				DISPLAY "You lose" WITH NO ADVANCING
 		END-EVALUATE
-	END-IF.
 
-	IF (WS-USER-CHOICE = "rock") THEN
-		EVALUATE WS-BOT-CHOICE-TEXT
-			WHEN "rock"
-				DISPLAY "Tie" WITH NO ADVANCING
-			WHEN "paper"
-				DISPLAY "You lose" WITH NO ADVANCING
-			WHEN "scissors"
-				DISPLAY "You win" WITH NO ADVANCING
-		END-EVALUATE
-	END-IF.
+	ELSE
 
-	IF (WS-USER-CHOICE = "scissors") THEN
-		EVALUATE WS-BOT-CHOICE-TEXT
-			WHEN "rock"
-				DISPLAY "You lose" WITH NO ADVANCING
-			WHEN "paper"
-				DISPLAY "You win" WITH NO ADVANCING
-			WHEN "scissors"
-				DISPLAY "Tie" WITH NO ADVANCING
-		END-EVALUATE
+		IF (WS-USER-CHOICE = "rock") THEN
+			EVALUATE WS-BOT-CHOICE-TEXT
+				WHEN "rock"
+					DISPLAY "Tie" WITH NO ADVANCING
+				WHEN "paper"
+					DISPLAY "You lose" WITH NO ADVANCING
+				WHEN "scissors"
+					DISPLAY "You win" WITH NO ADVANCING
+			END-EVALUATE
+
+		ELSE
+
+			IF (WS-USER-CHOICE = "scissors") THEN
+				EVALUATE WS-BOT-CHOICE-TEXT
+					WHEN "rock"
+						DISPLAY "You lose" WITH NO ADVANCING
+					WHEN "paper"
+						DISPLAY "You win" WITH NO ADVANCING
+					WHEN "scissors"
+						DISPLAY "Tie" WITH NO ADVANCING
+				END-EVALUATE
+			END-IF
+		END-IF
 	END-IF.
 
 *> Show what bot picked
