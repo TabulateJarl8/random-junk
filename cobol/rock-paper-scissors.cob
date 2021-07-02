@@ -1,0 +1,82 @@
+IDENTIFICATION DIVISION.
+PROGRAM-ID. ROCK-PAPER-SCISSORS.
+
+ENVIRONMENT DIVISION.
+CONFIGURATION SECTION.
+REPOSITORY.
+	FUNCTION ALL INTRINSIC.
+
+DATA DIVISION.
+	WORKING-STORAGE SECTION.
+	01 WS-USER-CHOICE PIC A(8).
+
+	01 WS-BOT-CHOICE PIC 9V9(5).
+	01 WS-BOT-CHOICE-TEXT PIC A(8).
+
+PROCEDURE DIVISION.
+
+*> Paper = 0-0.33
+*> Rock = 0.33-0.66
+*> Scissors = 0.66-1
+*>
+*> Paper beats rock, rock beats scissors, scissors beats paper
+
+	MOVE FUNCTION RANDOM(SECONDS-PAST-MIDNIGHT) TO WS-BOT-CHOICE.
+
+*> Get User input and make it lowercase
+	DISPLAY "Rock, paper, or scissors? " WITH NO ADVANCING.
+	ACCEPT WS-USER-CHOICE.
+
+	MOVE FUNCTION LOWER-CASE(WS-USER-CHOICE) TO WS-USER-CHOICE.
+
+*> Convert bot choice to text
+	IF (WS-BOT-CHOICE <= 0.33) THEN
+		MOVE "paper" TO WS-BOT-CHOICE-TEXT
+	ELSE
+		IF (WS-BOT-CHOICE > 0.33) AND (WS-BOT-CHOICE <= 0.66) THEN
+			MOVE "rock" TO WS-BOT-CHOICE-TEXT
+		ELSE
+			MOVE "scissors" TO WS-BOT-CHOICE-TEXT
+		END-IF
+	END-IF.
+
+*> Compare user and bot choices. Don't print endl because we want to show what
+*> the bot picked
+
+	IF (WS-USER-CHOICE = "paper") THEN
+		EVALUATE WS-BOT-CHOICE-TEXT
+			WHEN "rock"
+				DISPLAY "You win" WITH NO ADVANCING
+			WHEN "paper"
+				DISPLAY "Tie" WITH NO ADVANCING
+			WHEN "scissors"
+				DISPLAY "You lose" WITH NO ADVANCING
+		END-EVALUATE
+	END-IF.
+
+	IF (WS-USER-CHOICE = "rock") THEN
+		EVALUATE WS-BOT-CHOICE-TEXT
+			WHEN "rock"
+				DISPLAY "Tie" WITH NO ADVANCING
+			WHEN "paper"
+				DISPLAY "You lose" WITH NO ADVANCING
+			WHEN "scissors"
+				DISPLAY "You win" WITH NO ADVANCING
+		END-EVALUATE
+	END-IF.
+
+	IF (WS-USER-CHOICE = "scissors") THEN
+		EVALUATE WS-BOT-CHOICE-TEXT
+			WHEN "rock"
+				DISPLAY "You lose" WITH NO ADVANCING
+			WHEN "paper"
+				DISPLAY "You win" WITH NO ADVANCING
+			WHEN "scissors"
+				DISPLAY "Tie" WITH NO ADVANCING
+		END-EVALUATE
+	END-IF.
+
+*> Show what bot picked
+	DISPLAY ", bot picked " WS-BOT-CHOICE-TEXT.
+
+STOP RUN.
