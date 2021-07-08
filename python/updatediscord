@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+
+# Script to update discord on Arch Linux before the packager has updated it
+# Using only standard library modules
+
+import urllib.request
+import tempfile
+import os
+import re
+import argparse
+
+def main(**kwargs):
+	with tempfile.TemporaryDirectory() as f:
+		os.chdir(f)
+
+		urllib.request.urlretrieve('https://raw.githubusercontent.com/archlinux/svntogit-community/packages/discord/trunk/PKGBUILD', 'PKGBUILD')
+
+		with open('PKGBUILD') as PKGBUILD_FILE:
+			PKGBUILD = [line.rstrip() for line in PKGBUILD_FILE.readlines()]
+
+		# Find variables
+		if kwargs['version'] is not None:
+			pkgver = kwargs['version']
+		else:
+			pkgver = next(line.replace(' ', '').split('=')[1] for line in PKGBUILD if line.startswith('pkgver'))
+			pkgver = pkgver.split('.')
+			pkgver[-1] = str(int(pkgver[-1]) + 1)
+			pkgver = '.'.join(pkgver)
+
+		pkgrel = next(line.replace(' ', '').split('=')[1] for line in PKGBUILD if line.startswith('pkgrel'))
+
+		PKGBUILD = '\n'.join(PKGBUILD)
+
+		# Patch PKGBUILD to update to latest discord version
+		PKGBUILD = re.sub('pkgrel=[0-9]+', 'pkgrel=' + str(int(pkgrel) + 1), PKGBUILD)
+		PKGBUILD = PKGBUILD.replace('$pkgver', pkgver)
+		PKGBUILD = re.sub(r'sha512sums=\([^)]+\)', 'sha512sums=("SKIP" "SKIP" "SKIP")', PKGBUILD, re.MULTILINE)
+
+		with open('PKGBUILD', 'w') as PKGBUILD_FILE:
+			PKGBUILD_FILE.write(PKGBUILD)
+
+		os.system('makepkg -s')
+
+if __name__ == '__main__':
+	parser = argparse.ArgumentParser(description='Script to update discord on Arch Linux before the packager has updated it')
+	parser.add_argument('-v', '--version', help='Specify a version manually instead of having the patch number bumped by 1')
+	args = parser.parse_args()
+
+	main(**vars(args))
