@@ -39,7 +39,7 @@ def main(**kwargs):
 		with open('PKGBUILD', 'w') as PKGBUILD_FILE:
 			PKGBUILD_FILE.write(PKGBUILD)
 
-		os.system('makepkg -s')
+		os.system('makepkg -si')
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Script to update discord on Arch Linux before the packager has updated it')
