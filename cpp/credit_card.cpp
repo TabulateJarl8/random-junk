@@ -16,7 +16,7 @@ int getSum(T n) {
 int main() {
 	// Credit card validator in C++
 	// Uses the Luhn algorithm to determine if the card could exist, partnered
-	// with a regular expression to test if the beginning of the card
+	// with a regular expression to test if the beginning of the card is valid
 	// Valid card number: 4532115680546236
 	cout << "Card Number: ";
 
