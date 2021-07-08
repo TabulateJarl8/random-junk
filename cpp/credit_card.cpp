@@ -13,20 +13,26 @@ int getSum(T n) {
 }
 
 int main() {
-	// 4532115680546236
+	// Credit card validator in C++
+	// Uses the Luhn algorithm to determine if the card could exist
+	// Valid card number: 4532115680546236
 	cout << "Card Number: ";
 
 	string card_numbers;
 	cin >> card_numbers;
 
 	for (int i = 1; i < card_numbers.length(); i += 2) {
+		// Multiply every other number by two, and get the sum of the resuling
+		// digits
 		int value = stoi(string(1, card_numbers[i])) * 2;
 		value = getSum(value);
 		card_numbers[i] = value + '0';
 	}
 
+	// Get the total sum of all digits in the new number
 	int total_sum = getSum(stol(card_numbers));
 
+	// Is valid number if the total_sum modulo 10 is equal to 0
 	int is_valid_number = (total_sum % 10 == 0) ? 1 : 0;
 
 	if (is_valid_number) {
