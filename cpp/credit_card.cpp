@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <regex>
 #include <type_traits>
 using namespace std;
 
@@ -14,12 +15,28 @@ int getSum(T n) {
 
 int main() {
 	// Credit card validator in C++
-	// Uses the Luhn algorithm to determine if the card could exist
+	// Uses the Luhn algorithm to determine if the card could exist, partnered
+	// with a regular expression to test if the beginning of the card
 	// Valid card number: 4532115680546236
 	cout << "Card Number: ";
 
 	string card_numbers;
 	cin >> card_numbers;
+
+	regex valid_card("^(?:4[0-9]{12}(?:[0-9]{3})?"         // Visa
+			"|  (?:5[1-5][0-9]{2}"                         // MasterCard
+			"| 222[1-9]|22[3-9][0-9]|2[3-6][0-9]{2}|27[01][0-9]|2720)[0-9]{12}"
+			"|  3[47][0-9]{13}"                            // American Express
+			"|  3(?:0[0-5]|[68][0-9])[0-9]{11}"            // Diners Club
+			"|  6(?:011|5[0-9]{2})[0-9]{12}"               // Discover
+			"|  (?:2131|1800|35\\d{3})\\d{11}"             // JCB
+			")$"
+	);
+
+	if (!regex_match(card_numbers, valid_card)) {
+		cout << "Credit card number is not possible." << endl;
+		return 1;
+	}
 
 	for (int i = 1; i < card_numbers.length(); i += 2) {
 		// Multiply every other number by two, and get the sum of the resuling
@@ -36,9 +53,9 @@ int main() {
 	int is_valid_number = (total_sum % 10 == 0) ? 1 : 0;
 
 	if (is_valid_number) {
-		cout << "Is possible credit card number" << endl;
+		cout << "Credit card number is possible." << endl;
 	} else {
-		cout << "Is not possible credit card number" << endl;
+		cout << "Credit card number is not possible." << endl;
 	}
 
 	return is_valid_number;
