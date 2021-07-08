@@ -23,7 +23,8 @@ int main() {
 	string card_numbers;
 	cin >> card_numbers;
 
-	regex valid_card("^(?:4[0-9]{12}(?:[0-9]{3})?"         // Visa
+	regex valid_card(
+			"^(?:4[0-9]{12}(?:[0-9]{3})?"                  // Visa
 			"|  (?:5[1-5][0-9]{2}"                         // MasterCard
 			"| 222[1-9]|22[3-9][0-9]|2[3-6][0-9]{2}|27[01][0-9]|2720)[0-9]{12}"
 			"|  3[47][0-9]{13}"                            // American Express
