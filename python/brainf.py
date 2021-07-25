@@ -1,5 +1,6 @@
 """Sort of working BrainF interpreter
-Doesn't work with nested loops
+Doesn't work with nested loops.
+Uses 8-bit cells.
 """
 
 import argparse
@@ -43,12 +44,20 @@ class Cells:
 	def increment(self):
 		"""Increment current cell by one
 		"""
-		self.cells[self.pointer] += 1
+		if self.cells[self.pointer] != 255:
+			self.cells[self.pointer] += 1
+		else:
+			# current cell is 255, overflow to 0 since we have 8-bit cells
+			self.cells[self.pointer] = 0
 
 	def decrement(self):
 		"""Decrement current cell by one
 		"""
-		self.cells[self.pointer] -= 1
+		if self.cells[self.pointer]:
+			self.cells[self.pointer] -= 1
+		else:
+			# current cell is 0, underflow to 255 since we have 8-bit cells
+			self.cells[self.pointer] = 255
 
 	def print_current_cell(self):
 		"""Converts the current cell's value to ASCII and then prints it
