@@ -1,0 +1,48 @@
+\documentclass[12pt]{article}
+
+%Packages
+\usepackage{setspace}
+\doublespacing
+\usepackage[letterpaper, portrait, margin=1.0in, headheight=25mm]{geometry}
+\usepackage{url}
+\usepackage{apacite}
+\usepackage{fancyhdr}
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+
+\setlength{\parindent}{4em}
+\setlength{\parskip}{1em}
+\pagestyle{fancy}
+\renewcommand{\sectionmark}[1]{\markright{#1}}
+\fancyhf{}
+\lhead{Why Linux is better than Windows - \rightmark}
+\rhead{\thepage}
+
+\begin{document}
+
+	\tableofcontents{}
+
+	\font\bighdr=cmr12 at 25pt
+	\title{{\bighdr Why Linux is better than Windows}}
+	\author{Connor Sample}
+	\date {\today}
+	\maketitle\thispagestyle{fancy}
+
+	\section{Introduction}
+
+	Most people use Windows, and that is how it is as of 2021. In fact, 72.98\%  of the desktop operating system market is dominated by Windows, with OS X in second place. \cite{market_share:0} Most people don't know that there are other options, options that are potentially better for them. That's my goal in this paper. I want to convince you to consider switching to Linux and expose you to the other options that there are to choose from. Will you end up switching? Maybe not, but you should see both sides of the topic before making a decision.
+
+	\section{Variety}
+
+	I'll start with variety. If you've heard things about Linux before, there's a very high chance that it was about the large amount of freedom that you have. Linux can run on almost any computer, from extremely old laptops to the highest end modern PC. For example, a page containing FAQ about Tiny Core Linux says, ``an absolute minimum of RAM is 46MB". \cite{tiny_core:0} Tiny Core may not look the best by default, but it runs which is probably better than Windows could say on 46MB of RAM, since it tends to use gigabytes of RAM while doing nothing. What if you have a more modern computer and you also want an operating system that looks a bit more modern? There are options for that. You could check out KDE, which is incredibly customizable and looks nice by default as well. There are also desktop environments for computers that aren't the best, but still want something nice and customizable. The whole thing about Linux is that you can make it do whatever you would like. Don't like Ubuntu? Try an Arch-based distro. Don't like GNOME? Why not try out KDE or Cinnamon instead? If you don't like how something is, you can most likely change it, and that's a nice change from being restricted on Windows or macOS.
+
+	\section{Package Managers}
+
+	Package managers are so great that I needed to give them their own section. If you want to install software on Windows, you will need to open a web browser, find the website for it and download the installer all while dodging viruses and ads, and then you need to install the software. On Linux, this can all be done with 1 command or a few button clicks if you want to use a GUI version of the package manager. Let's say you wanted to install VLC. You could either run the correct command for your distro (\verb|sudo apt install vlc| for Debian-based distros and \verb|sudo pacman -S vlc| for Arch-based distros), or you could open up a GUI wrapper for your package manager, like Pamac or Ubuntu Software Center and search for ``vlc" and install it that way. This way, everything is centralized into one single location, so that you don't have to go looking for all the software you want. All updates are managed by one thing instead of everything managing their own updates, and it's easy to remove software as well. There are also things like the AUR that allows users to publish any software they would like, and there are currently about 71,000 packages on it. \cite{aur:0}
+
+	\newpage
+	% Bibliography
+	\bibliographystyle{apacite}
+	\bibliography{bibliography}
+
+\end{document}

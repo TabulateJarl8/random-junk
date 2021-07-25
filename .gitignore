@@ -1,0 +1,9 @@
+latex/*.aux
+latex/*.bbl
+latex/*.blg
+latex/*.fdb_latexmk
+latex/*.fls
+latex/*.synctex*
+latex/*.log
+latex/*.toc
+latex/*.pyg
