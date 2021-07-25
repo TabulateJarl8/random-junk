@@ -94,6 +94,9 @@ class Cells:
 
 
 class BrainF:
+	"""Recursive class for BrainF code
+	"""
+
 	def __init__(self, code, cells):
 		self.code = code
 		self.cells = cells
@@ -108,6 +111,14 @@ class BrainF:
 		self.parse_code()
 
 	def parse_code(self):
+		"""Recursively parse code
+		Splits into 3 groups: first, loop, and second. First contains all code
+		before the first loop encountered, loop contains all of the code
+		contained within the first loop (including nested loops), and second
+		is everything after the first loop. loop and second are then passed to
+		new BrainF objects to be parsed on their own, each running this process
+		again, which allows for nested loops to correctly function.
+		"""
 		for char in self.code:
 			# order of checking here is extremely important
 			if self.loop_count == 0 and self.loop:
@@ -133,13 +144,20 @@ class BrainF:
 			self.second_code = BrainF(self.second, self.cells)
 
 	def run(self):
+		"""Run BrainF code.
+		This will run the code contained within first, and then call the run
+		method of the loop code until the current cell is zero. Lastly, it will
+		call the run method of the second code. Each of these run methods
+		called will recursively call the run methods contained within their
+		child attributes, until all code has ran its `first` attribute as many
+		times as needed.
+		"""
 		self.cells.run_instruction_set(self.first)
 		if self.loop_code is not None:
 			while not self.cells.current_cell_is_zero():
 				self.loop_code.run()
 		if self.second_code is not None:
 			self.second_code.run()
-
 
 	def __repr__(self):
 		return f'BrainF(first={self.first!r}, loop={self.loop!r}, second={self.second!r})'
@@ -154,8 +172,21 @@ def main(brainf_text, cell_size=8):
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='BrainF Interpreter written in Python')
-	parser.add_argument('in_file', type=argparse.FileType('r', encoding='UTF-8'), help='Input file')
-	parser.add_argument('-s', '--cell-size', choices=[8, 16, 32], required=False, default=8, type=int, help='Cell Size (bits).')
+	parser.add_argument(
+		'in_file',
+		type=argparse.FileType('r', encoding='UTF-8'),
+		help='Input file'
+	)
+
+	parser.add_argument(
+		'-s',
+		'--cell-size',
+		choices=[8, 16, 32],
+		required=False,
+		default=8,
+		type=int,
+		help='Cell Size (bits).'
+	)
 
 	args = parser.parse_args()
 
