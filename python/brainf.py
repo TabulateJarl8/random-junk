@@ -1,5 +1,4 @@
-"""Sort of working BrainF interpreter
-Doesn't work with nested loops.
+"""Probably working BrainF interpreter
 Uses 8-bit cells.
 """
 
@@ -90,35 +89,63 @@ class Cells:
 		return f'Cells(cells={self.cells}, pointer={self.pointer})'
 
 
+class BrainF:
+	def __init__(self, code, cells):
+		self.code = code
+		self.cells = cells
+		self.loop_count = 0
+
+		self.first = ''
+		self.loop = ''
+		self.second = ''
+		self.loop_code = None
+		self.second_code = None
+
+		self.parse_code()
+
+	def parse_code(self):
+		for char in self.code:
+			# order of checking here is extremely important
+			if self.loop_count == 0 and self.loop:
+				# we've already gone through the loop, append the rest to second
+				self.second += char
+			elif char == ']':
+				# attempt to close a loop if we haven't already been through
+				self.loop_count -= 1
+			elif char == '[':
+				self.loop_count += 1
+			elif self.loop_count == 0 and not self.loop:
+				# not in a loop yet, append to first
+				self.first += char
+
+			if self.loop_count > 0:
+				# in loop currently; append to loop unless its the [ which opens the loop
+				if not (char == '[' and self.loop_count == 1):
+					self.loop += char
+
+		if self.loop:
+			self.loop_code = BrainF(self.loop, self.cells)
+		if self.second:
+			self.second_code = BrainF(self.second, self.cells)
+
+	def run(self):
+		self.cells.run_instruction_set(self.first)
+		if self.loop_code is not None:
+			while not self.cells.current_cell_is_zero():
+				self.loop_code.run()
+		if self.second_code is not None:
+			self.second_code.run()
+
+
+	def __repr__(self):
+		return f'BrainF(first={self.first!r}, loop={self.loop!r}, second={self.second!r})'
+
+
 def main(brainf_text):
 	"""Main entrypoint. Accepts brainf_text as a string
 	"""
 	cells = Cells()
-	loop_buffer = []
-	in_loop = False
-
-	for char in brainf_text:
-		if char == '[':
-			# start of loop
-			in_loop = True
-
-		elif char == ']':
-			# end of loop, run instructions until current cell is zero
-
-			while in_loop:
-				cells.run_instruction_set(loop_buffer)
-
-				# set to false here so that the loop always gets ran once
-				if cells.current_cell_is_zero():
-					in_loop = False
-
-			loop_buffer = []
-
-		elif in_loop:
-			loop_buffer.append(char)
-
-		else:
-			cells.run_instruction_set(char)
+	BrainF(brainf_text, cells).run()
 
 
 if __name__ == '__main__':
