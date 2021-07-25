@@ -1,5 +1,4 @@
 """Probably working BrainF interpreter
-Uses 8-bit cells.
 """
 
 import argparse
@@ -10,7 +9,7 @@ class Cells:
 	"""BrainF Cells Class
 	"""
 
-	def __init__(self):
+	def __init__(self, cell_size_bits=8):
 		self.cells = [0]
 		self.pointer = 0
 		self._instruction_mapping = {
@@ -21,6 +20,11 @@ class Cells:
 			',': self.take_user_input,
 			'.': self.print_current_cell
 		}
+
+		if cell_size_bits not in {8, 16, 32}:
+			raise ValueError("cell_size_bits must be one of {8, 16, 32}.")
+
+		self.INTEGER_MAX = (2 ** cell_size_bits) - 1
 
 	def seek_left(self):
 		"""Move pointer to the left by one
@@ -43,10 +47,10 @@ class Cells:
 	def increment(self):
 		"""Increment current cell by one
 		"""
-		if self.cells[self.pointer] != 255:
+		if self.cells[self.pointer] != self.INTEGER_MAX:
 			self.cells[self.pointer] += 1
 		else:
-			# current cell is 255, overflow to 0 since we have 8-bit cells
+			# current cell is INTEGER_MAX, overflow to 0
 			self.cells[self.pointer] = 0
 
 	def decrement(self):
@@ -55,8 +59,8 @@ class Cells:
 		if self.cells[self.pointer]:
 			self.cells[self.pointer] -= 1
 		else:
-			# current cell is 0, underflow to 255 since we have 8-bit cells
-			self.cells[self.pointer] = 255
+			# current cell is 0, underflow to INTEGER_MAX
+			self.cells[self.pointer] = self.INTEGER_MAX
 
 	def print_current_cell(self):
 		"""Converts the current cell's value to ASCII and then prints it
@@ -141,19 +145,20 @@ class BrainF:
 		return f'BrainF(first={self.first!r}, loop={self.loop!r}, second={self.second!r})'
 
 
-def main(brainf_text):
+def main(brainf_text, cell_size=8):
 	"""Main entrypoint. Accepts brainf_text as a string
 	"""
-	cells = Cells()
+	cells = Cells(cell_size)
 	BrainF(brainf_text, cells).run()
 
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='BrainF Interpreter written in Python')
 	parser.add_argument('in_file', type=argparse.FileType('r', encoding='UTF-8'), help='Input file')
+	parser.add_argument('-s', '--cell-size', choices=[8, 16, 32], required=False, default=8, type=int, help='Cell Size (bits).')
 
 	args = parser.parse_args()
 
 	brainf = re.sub(r'[^<>+\-,.[\]]', '', args.in_file.read())
 
-	main(brainf)
+	main(brainf, args.cell_size)
