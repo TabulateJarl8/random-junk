@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Probably working BrainF interpreter
 """
 
