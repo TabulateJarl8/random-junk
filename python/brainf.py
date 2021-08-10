@@ -3,13 +3,15 @@
 
 import argparse
 import re
+import sys
+from typing import Iterable
 
 
 class Cells:
 	"""BrainF Cells Class
 	"""
 
-	def __init__(self, cell_size_bits=8):
+	def __init__(self, cell_size_bits: int = 8) -> None:
 		self.cells = [0]
 		self.pointer = 0
 		self._instruction_mapping = {
@@ -26,7 +28,7 @@ class Cells:
 
 		self.INTEGER_MAX = (2 ** cell_size_bits) - 1
 
-	def seek_left(self):
+	def seek_left(self) -> None:
 		"""Move pointer to the left by one
 		"""
 		if self.pointer == 0:
@@ -35,7 +37,7 @@ class Cells:
 		else:
 			self.pointer -= 1
 
-	def seek_right(self):
+	def seek_right(self) -> None:
 		"""Move pointer to the right by one
 		"""
 		if self.pointer == len(self.cells) - 1:
@@ -44,7 +46,7 @@ class Cells:
 
 		self.pointer += 1
 
-	def increment(self):
+	def increment(self) -> None:
 		"""Increment current cell by one
 		"""
 		if self.cells[self.pointer] != self.INTEGER_MAX:
@@ -53,7 +55,7 @@ class Cells:
 			# current cell is INTEGER_MAX, overflow to 0
 			self.cells[self.pointer] = 0
 
-	def decrement(self):
+	def decrement(self) -> None:
 		"""Decrement current cell by one
 		"""
 		if self.cells[self.pointer]:
@@ -62,24 +64,24 @@ class Cells:
 			# current cell is 0, underflow to INTEGER_MAX
 			self.cells[self.pointer] = self.INTEGER_MAX
 
-	def print_current_cell(self):
+	def print_current_cell(self) -> None:
 		"""Converts the current cell's value to ASCII and then prints it
 		"""
 		print(chr(self.cells[self.pointer]), end='', flush=True)
 
-	def take_user_input(self):
+	def take_user_input(self) -> None:
 		"""Read first byte of user input into current cell
 		"""
 		# only read first byte of character, even if its more than 1 byte
-		input_as_bytes = input()[0].encode('utf-8')[0]
+		input_as_bytes = sys.stdin.read(1).encode('utf-8')[0]
 		self.cells[self.pointer] = input_as_bytes
 
-	def current_cell_is_zero(self):
+	def current_cell_is_zero(self) -> bool:
 		"""Returns True is current cell is equal to zero, else False
 		"""
 		return not self.cells[self.pointer]
 
-	def run_instruction_set(self, instructions):
+	def run_instruction_set(self, instructions: Iterable[str]) -> None:
 		"""Run a set of BrainF instructions passed as an iterable
 		"""
 		for char in instructions:
@@ -89,7 +91,7 @@ class Cells:
 			except KeyError as exc:
 				raise SyntaxError(f'Unexpected token: {char}') from exc
 
-	def __repr__(self):
+	def __repr__(self) -> str:
 		return f'Cells(cells={self.cells}, pointer={self.pointer})'
 
 
@@ -97,7 +99,7 @@ class BrainF:
 	"""Recursive class for BrainF code
 	"""
 
-	def __init__(self, code, cells):
+	def __init__(self, code: str, cells: Cells) -> None:
 		self.code = code
 		self.cells = cells
 		self.loop_count = 0
@@ -110,7 +112,7 @@ class BrainF:
 
 		self.parse_code()
 
-	def parse_code(self):
+	def parse_code(self) -> None:
 		"""Recursively parse code
 		Splits into 3 groups: first, loop, and second. First contains all code
 		before the first loop encountered, loop contains all of the code
@@ -143,7 +145,7 @@ class BrainF:
 		if self.second:
 			self.second_code = BrainF(self.second, self.cells)
 
-	def run(self):
+	def run(self) -> None:
 		"""Run BrainF code.
 		This will run the code contained within first, and then call the run
 		method of the loop code until the current cell is zero. Lastly, it will
@@ -159,11 +161,11 @@ class BrainF:
 		if self.second_code is not None:
 			self.second_code.run()
 
-	def __repr__(self):
+	def __repr__(self) -> str:
 		return f'BrainF(first={self.first!r}, loop={self.loop!r}, second={self.second!r})'
 
 
-def main(brainf_text, cell_size=8):
+def main(brainf_text: str, cell_size: int = 8) -> None:
 	"""Main entrypoint. Accepts brainf_text as a string
 	"""
 	cells = Cells(cell_size)
