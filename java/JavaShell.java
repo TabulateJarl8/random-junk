@@ -9,7 +9,7 @@ import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class Main
+public class JavaShell
 {
     public static void main(final String[] array) {
         System.out.println("Console Terminal Tool v1.5");
