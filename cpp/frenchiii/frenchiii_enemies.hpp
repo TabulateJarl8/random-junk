@@ -1,7 +1,6 @@
 #pragma once
 
 #include <vector>
-#include <memory>
 
 namespace frenchiii_enemies {
 	class FrenchEnemy {

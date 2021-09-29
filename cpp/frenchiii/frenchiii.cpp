@@ -1,4 +1,5 @@
 #include <iostream>
+#include <vector>
 #include "frenchiii_enemies.hpp"
 
 using namespace std;
@@ -8,6 +9,7 @@ bool inRange(unsigned low, unsigned high, unsigned x) {
 }
 
 int main() {
+	srand(time(0));
 	string options[] = {
 		"Baguette",
 		"Mime",
@@ -34,8 +36,10 @@ int main() {
 
 	cout << "You chose " << options[user_choice] << " as your weapon." << endl;
 
-	frenchiii_enemies::FrenchEnemy enemy = frenchiii_enemies::enemies[0];
-	cout << enemy.description << endl;
+	vector<frenchiii_enemies::FrenchEnemy> enemies_vector = frenchiii_enemies::enemies;
+	int random_index = rand() % enemies_vector.size();
+	frenchiii_enemies::FrenchEnemy current_enemy = enemies_vector[random_index];
+	cout << current_enemy.description << endl;
 
 	return 0;
 }
