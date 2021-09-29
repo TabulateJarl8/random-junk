@@ -37,7 +37,8 @@ int main() {
 	frenchiii_enemies::British enemy;
 	cout << enemy.description << endl;
 
-	cout << frenchiii_enemies::classes[0].description;
+	// string choice = frenchiii_enemies::classes[1]->description;
+	// cout << frenchiii_enemies::classes[0].description;
 
 	return 0;
 }

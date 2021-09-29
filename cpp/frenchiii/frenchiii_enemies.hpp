@@ -1,9 +1,14 @@
 #pragma once
 
+#include <vector>
+#include <memory>
+
 namespace frenchiii_enemies {
 	class EnemyBase {
 	public:
 		int health = 100;
+
+	virtual ~EnemyBase();
 	};
 
 	class BadGrammar: public EnemyBase {
@@ -36,18 +41,12 @@ namespace frenchiii_enemies {
 		std::string description = "I mean to be fair they liked him for a while. He should\'ve gotten his head out of the gutter.";
 	};
 
-	// std::vector<EnemyBase> thing;
-
-	// thing.push_back(BadGrammar)
-	// extern EnemyBase classes[] = {
-		// BadGrammar(),
-		// British(),
-		// Tourist(),
-		// Bastille(),
-		// Robespierre()
-	// };
-	extern BadGrammar classes[] = {
-		BadGrammar()
+	extern std::vector<EnemyBase*> classes = {
+		new BadGrammar,
+		new British,
+		new Tourist,
+		new Bastille,
+		new Robespierre
 	};
 
 }
