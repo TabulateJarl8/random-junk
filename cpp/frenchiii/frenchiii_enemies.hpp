@@ -24,4 +24,30 @@ namespace frenchiii_enemies {
 		std::string description = "Thinks Paris and Franch are the same thing.";
 	};
 
+	class Bastille: public EnemyBase {
+	public:
+		std::string name = "The Bastille";
+		std::string description = "Time to get some ammunition.";
+	};
+
+	class Robespierre: public EnemyBase {
+	public:
+		std::string name = "Robespierre";
+		std::string description = "I mean to be fair they liked him for a while. He should\'ve gotten his head out of the gutter.";
+	};
+
+	// std::vector<EnemyBase> thing;
+
+	// thing.push_back(BadGrammar)
+	// extern EnemyBase classes[] = {
+		// BadGrammar(),
+		// British(),
+		// Tourist(),
+		// Bastille(),
+		// Robespierre()
+	// };
+	extern BadGrammar classes[] = {
+		BadGrammar()
+	};
+
 }
