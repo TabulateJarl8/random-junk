@@ -23,21 +23,25 @@ int main() {
 	srand(seed);
 	int robuxnum = 0;
 	char letters[] = "abcdefghijklmnopqrstuvwxyz0123456789";
+	char period = '.';
 	FILE *outfile;
 
 	while (1) {
-		char filename[40];
-		char ext[3];
+		char characters[] = "abcdefghijklmnopqrstuvwxyz0123456789";
+		char filename[34] = "s";
 
-		for (int i = 0; i < (rand() % 10 + 30); i++) {
-			strncat(filename, &letters[rand() % 36], 1);
+		int filename_length = rand() % 30;
+		for (int i = 0; i < filename_length; i++) {
+			filename[i] = characters[rand() % 36];
 		}
 
-		for (int i = 0; i < 3; i++) {
-			strncat(ext, &letters[rand() % 36], 1);
+		filename[filename_length] = '.';
+
+		for (int i = 1; i <= 3; i++) {
+			filename[filename_length + i] = characters[rand() % 36];
 		}
 
-		outfile = fopen(sprintf("%s.%s", filename, ext), "w");
+		outfile = fopen(filename, "w");
 		fprintf(outfile, "HERE IS %d ROBUXES FOR YOU!!!!", robuxnum);
 
 		robuxnum++;
