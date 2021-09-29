@@ -34,11 +34,8 @@ int main() {
 
 	cout << "You chose " << options[user_choice] << " as your weapon." << endl;
 
-	frenchiii_enemies::British enemy;
+	frenchiii_enemies::FrenchEnemy enemy = frenchiii_enemies::enemies[0];
 	cout << enemy.description << endl;
-
-	// string choice = frenchiii_enemies::classes[1]->description;
-	// cout << frenchiii_enemies::classes[0].description;
 
 	return 0;
 }
