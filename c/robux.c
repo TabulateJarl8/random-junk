@@ -3,6 +3,7 @@
 #include <time.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <stdint.h>
 
 unsigned long mix(unsigned long a, unsigned long b, unsigned long c) {
 	a=a-b;  a=a-c;  a=a^(c >> 13);
@@ -21,7 +22,7 @@ unsigned long mix(unsigned long a, unsigned long b, unsigned long c) {
 int main() {
 	unsigned long seed = mix(clock(), time(NULL), getpid());
 	srand(seed);
-	int robuxnum = 0;
+	uintmax_t robuxnum = 0;
 	char letters[] = "abcdefghijklmnopqrstuvwxyz0123456789";
 	char period = '.';
 	FILE *outfile;
@@ -45,6 +46,8 @@ int main() {
 		fprintf(outfile, "HERE IS %d ROBUXES FOR YOU!!!!", robuxnum);
 
 		robuxnum++;
+
+		printf("%d", robuxnum);
 	}
 	return 0;
 }
