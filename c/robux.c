@@ -28,7 +28,7 @@ int main() {
 
 	while (1) {
 		char characters[] = "abcdefghijklmnopqrstuvwxyz0123456789";
-		char filename[34] = "s";
+		char filename[35] = "";
 
 		int filename_length = rand() % 30;
 		for (int i = 0; i < filename_length; i++) {
