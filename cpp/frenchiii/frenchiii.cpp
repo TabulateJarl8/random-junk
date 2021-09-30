@@ -1,11 +1,23 @@
 #include <iostream>
 #include <vector>
+#include <chrono>
+#include <thread>
+#include <cstdlib>
 #include "frenchiii_enemies.hpp"
 
 using namespace std;
+using namespace std::literals::chrono_literals;
 
 bool inRange(unsigned low, unsigned high, unsigned x) {
 	return  ((x-low) <= (high-low));
+}
+
+void clear_screen() {
+	#ifdef WINDOWS
+		system("cls");
+	#else
+		system("clear");
+	#endif
 }
 
 int main() {
@@ -36,10 +48,17 @@ int main() {
 
 	cout << "You chose " << options[user_choice] << " as your weapon." << endl;
 
+	this_thread::sleep_for(2s);
+
 	vector<frenchiii_enemies::FrenchEnemy> enemies_vector = frenchiii_enemies::enemies;
 	int random_index = rand() % enemies_vector.size();
 	frenchiii_enemies::FrenchEnemy current_enemy = enemies_vector[random_index];
-	cout << current_enemy.description << endl;
+
+	cout << endl << "Your Enemy:" << endl << current_enemy.name << " - " << current_enemy.description << endl;
+
+	this_thread::sleep_for(4s);
+
+	clear_screen();
 
 	return 0;
 }
