@@ -7,3 +7,4 @@ latex/*.synctex*
 latex/*.log
 latex/*.toc
 latex/*.pyg
+java/*.class
