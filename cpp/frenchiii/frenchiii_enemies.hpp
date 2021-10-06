@@ -14,7 +14,7 @@ namespace frenchiii_enemies {
 		}
 	};
 
-	extern std::vector<FrenchEnemy> enemies {
+	const std::vector<FrenchEnemy> enemies {
 		{"Bad Grammar", "une puissant ennemi"},
 		{"The British", "They\'ll dip your baguette in tea"},
 		{"Tourist", "Thinks Paris and Franch are the same thing."},
