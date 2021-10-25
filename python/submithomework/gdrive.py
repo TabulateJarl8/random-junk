@@ -10,7 +10,7 @@ from googleapiclient.http import MediaIoBaseDownload
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly', 'https://www.googleapis.com/auth/drive.readonly']
-
+current_directory = pathlib.Path(__file__).resolve().parent
 
 def main():
 	"""Download latest file from specified folder
@@ -18,25 +18,25 @@ def main():
 	"""
 
 	config = configparser.ConfigParser()
-	config.read('config.ini')
-	gdrive_folder_id = config['gdrive_folder_id']
+	config.read(current_directory / 'config.ini')
+	gdrive_folder_id = config['config']['gdrive_folder_id']
 
 	creds = None
 	# The file token.json stores the user's access and refresh tokens, and is
 	# created automatically when the authorization flow completes for the first
 	# time.
-	if pathlib.Path('token.json').is_file():
-		creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+	if pathlib.Path(current_directory / 'token.json').is_file():
+		creds = Credentials.from_authorized_user_file(current_directory / 'token.json', SCOPES)
 	# If there are no (valid) credentials available, let the user log in.
 	if not creds or not creds.valid:
 		if creds and creds.expired and creds.refresh_token:
 			creds.refresh(Request())
 		else:
 			flow = InstalledAppFlow.from_client_secrets_file(
-				'credentials.json', SCOPES)
+				current_directory / 'credentials.json', SCOPES)
 			creds = flow.run_local_server(port=0)
 		# Save the credentials for the next run
-		with open('token.json', 'w') as token:
+		with open(current_directory / 'token.json', 'w') as token:
 			token.write(creds.to_json())
 
 	service = build('drive', 'v3', credentials=creds)

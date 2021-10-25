@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import re
 import pathlib
 import sys
@@ -100,10 +102,12 @@ def submit_assignment(assignment_id, fileid, CANVAS_TOKEN, course_id):
 
 
 if __name__ == '__main__':
+	current_directory = pathlib.Path(__file__).resolve().parent
+
 	config = configparser.ConfigParser()
-	config.read('config.ini')
-	CANVAS_TOKEN = config['api_key']
-	COURSE_ID = config['course_id']
+	config.read(current_directory / 'config.ini')
+	CANVAS_TOKEN = config['config']['api_key']
+	COURSE_ID = config['config']['course_id']
 
 	assignment = get_assignment(CANVAS_TOKEN, COURSE_ID)
 
