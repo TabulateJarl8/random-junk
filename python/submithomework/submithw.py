@@ -124,7 +124,7 @@ class HomeworkSubmitter:
 
 	def write_assignment_to_school(self):
 		"""Write file to my school git repo"""
-		self.filepath = pathlib.Path.home() / pathlib.Path(f'school/11th/sem1/ch{self.assignment["unit_num"]}/{self.assignment["filename"]}')
+		self.filepath = pathlib.Path.home() / pathlib.Path(f'school/11th/sem1/precalc/ch{self.assignment["unit_num"]}/{self.assignment["filename"]}')
 		if self.filepath.is_file():
 			print(f'Error: File exists: {str(self.filepath)}')
 			if input('Continue Anyway? [y/N] ').lower() != 'y':
