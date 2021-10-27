@@ -3,10 +3,10 @@
 import re
 import pathlib
 import sys
-import os
 import configparser
 import shutil
 import io
+import subprocess
 
 import pick # pip3 install pick
 import requests # pip3 install requests
@@ -130,7 +130,7 @@ class HomeworkSubmitter:
 			if input('Continue Anyway? [y/N] ').lower() != 'y':
 				sys.exit(1)
 			else:
-				os.remove(str(self.filepath))
+				self.filepath.unlink()
 
 		self.filepath.parent.mkdir(exist_ok=True)
 		with self.filepath.open('wb') as f:
@@ -182,12 +182,13 @@ class HomeworkSubmitter:
 			self.upload_success = False
 
 	def finalize(self):
-		if self.upload_success:
-			os.system(f'/usr/lib/firefox/firefox -P School "{self.assignment["form_url"]}"')
-			if shutil.which('pushschool'):
-				os.system('pushschool')
-			else:
-				print('Warning: pushschool command not found. Skipping')
+		#if self.upload_success:
+		if shutil.which('pushschool'):
+			subprocess.Popen(['pushschool'])
+		else:
+			print('Warning: pushschool command not found. Skipping')
+
+		subprocess.Popen(['/usr/lib/firefox/firefox', '-P', 'School', self.assignment["form_url"]], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 	def autorun(self):
 		"""Run all functions needed to submit homework"""
