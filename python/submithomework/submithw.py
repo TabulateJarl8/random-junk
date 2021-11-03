@@ -15,6 +15,7 @@ import requests # pip3 install requests
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
+from google.auth.exceptions import RefreshError
 from google.oauth2.credentials import Credentials
 from googleapiclient.http import MediaIoBaseDownload
 
@@ -40,6 +41,12 @@ class HomeworkSubmitter:
 		self.file_id = None
 		self.upload_success = None
 
+	def reauthenticate_creds(self):
+		flow = InstalledAppFlow.from_client_secrets_file(
+			self.current_directory / 'credentials.json', self.SCOPES)
+		creds = flow.run_local_server(port=0)
+		return creds
+
 	def download_latest_file(self):
 		"""Download latest file from specified folder
 		Folder ID is specified in the `gdrive_folder_id` key in config.ini
@@ -54,11 +61,16 @@ class HomeworkSubmitter:
 		# If there are no (valid) credentials available, let the user log in.
 		if not creds or not creds.valid:
 			if creds and creds.expired and creds.refresh_token:
-				creds.refresh(Request())
+				try:
+					creds.refresh(Request())
+				except RefreshError:
+					if input('Cannot refresh authentication token. Reauthenticate? [Y/n] ').lower() == 'n':
+						sys.exit(1)
+					else:
+						(self.current_directory / 'token.json').unlink()
+						creds = self.reauthenticate_creds()
 			else:
-				flow = InstalledAppFlow.from_client_secrets_file(
-					self.current_directory / 'credentials.json', self.SCOPES)
-				creds = flow.run_local_server(port=0)
+				creds = self.reauthenticate_creds()
 			# Save the credentials for the next run
 			with open(self.current_directory / 'token.json', 'w') as token:
 				token.write(creds.to_json())
