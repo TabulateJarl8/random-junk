@@ -1,16 +1,16 @@
+use rand::Rng;
+use std::cmp::Ordering;
 use std::io;
 use std::io::Write;
 use std::process;
-use std::cmp::Ordering;
-use rand::Rng;
 
 fn main() {
-	ctrlc::set_handler(move || {
-		println!("SIGINT Recieved; Exiting");
-		process::exit(0x0100);
-	})
-	.expect("Error settings Ctrl+C handler");
-	
+    ctrlc::set_handler(move || {
+        println!("SIGINT Recieved; Exiting");
+        process::exit(0x0100);
+    })
+    .expect("Error settings Ctrl+C handler");
+
     let secret_number = rand::thread_rng().gen_range(1..101);
 
     println!("Guess the number");
@@ -26,14 +26,14 @@ fn main() {
             .expect("Failed to read line");
 
         let guess: u32 = match guess.trim().parse() {
-                Ok(num) => num,
-                Err(_) => {
-                    if guess.trim().eq("exit") {
-                        process::exit(0x0100);
-                    }
-                    println!("Please input a number");
-                    continue;
+            Ok(num) => num,
+            Err(_) => {
+                if guess.trim().eq("exit") {
+                    process::exit(0x0100);
                 }
+                println!("Please input a number");
+                continue;
+            }
         };
 
         match guess.cmp(&secret_number) {
@@ -45,5 +45,4 @@ fn main() {
             }
         }
     }
-
 }
