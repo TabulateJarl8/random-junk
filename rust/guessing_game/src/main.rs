@@ -5,6 +5,12 @@ use std::cmp::Ordering;
 use rand::Rng;
 
 fn main() {
+	ctrlc::set_handler(move || {
+		println!("SIGINT Recieved; Exiting");
+		process::exit(0x0100);
+	})
+	.expect("Error settings Ctrl+C handler");
+	
     let secret_number = rand::thread_rng().gen_range(1..101);
 
     println!("Guess the number");

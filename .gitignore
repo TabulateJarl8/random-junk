@@ -8,3 +8,5 @@ latex/*.log
 latex/*.toc
 latex/*.pyg
 java/*.class
+rust/**/target
+rust/**/Cargo.lock
