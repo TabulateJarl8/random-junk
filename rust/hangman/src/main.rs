@@ -65,6 +65,10 @@ fn main() {
         io::stdin().read_line(&mut guess).expect("Failed to read stdin buffer");
 
         let guess = guess.trim().to_lowercase();
+        if guess == "" {
+            continue;
+        }
+        
         let guess_character = guess.chars().next().unwrap();
 
         // validate user input
