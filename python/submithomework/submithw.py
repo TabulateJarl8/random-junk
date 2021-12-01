@@ -185,7 +185,7 @@ class HomeworkSubmitter:
 		resp = requests.post(f'https://learn.vccs.edu/api/v1/courses/{self.COURSE_ID}/assignments/{self.assignment["id"]}/submissions', headers=headers, data=data).json()
 		print(resp)
 
-		if 'upload_status' in resp and resp['upload_status'] == 'success':
+		if resp['attachments'][0]['upload_status'] == 'success':
 			print('Assignment uploaded successfully!')
 			self.upload_success = True
 		else:
