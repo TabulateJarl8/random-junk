@@ -7,6 +7,13 @@ use std::io::Write;
 mod hangman_generator;
 
 fn main() {
+    #[cfg(windows)]
+    {
+        let enable = ansi_term::enable_ansi_support();
+        drop(enable);
+    }
+
+
     println!("{}\n", Style::new().underline().paint("-- RUST HANGMAN --"));
     let words_string = include_str!("words.txt");
     let words: Vec<&str> = words_string.split("\n").collect();
@@ -58,6 +65,10 @@ fn main() {
         io::stdin().read_line(&mut guess).expect("Failed to read stdin buffer");
 
         let guess = guess.trim().to_lowercase();
+        if guess == "" {
+            continue;
+        }
+        
         let guess_character = guess.chars().next().unwrap();
 
         // validate user input
