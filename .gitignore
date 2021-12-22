@@ -10,3 +10,4 @@ latex/*.pyg
 java/*.class
 rust/**/target
 rust/**/Cargo.lock
+python/**/__pycache__
