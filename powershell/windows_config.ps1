@@ -14,7 +14,7 @@ if ($enable) {
 	&{$p='HKCU:Software\Microsoft\Windows\CurrentVersion\Themes\Personalize';&Set-ItemProperty -Path $p -Name AppsUseLightTheme -Value 0}
 
 	# Disable shake to minimize
-	${$p='HKCU:Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced';&Set-ItemProperty -Path $p -Name DisallowShaking -Value 1}
+	&{$p='HKCU:Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced';&Set-ItemProperty -Path $p -Name DisallowShaking -Value 1}
 
 	&{&Stop-Process -f -ProcessName explorer}
 } elseif ($disable) {
@@ -25,7 +25,7 @@ if ($enable) {
 	&{$p='HKCU:Software\Microsoft\Windows\CurrentVersion\Themes\Personalize';&Set-ItemProperty -Path $p -Name AppsUseLightTheme -Value 1}
 
 	# Enable shake to minimize
-	${$p='HKCU:Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced';&Set-ItemProperty -Path $p -Name DisallowShaking -Value 0}
+	&{$p='HKCU:Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced';&Set-ItemProperty -Path $p -Name DisallowShaking -Value 0}
 
 	&{&Stop-Process -f -ProcessName explorer}
 }
