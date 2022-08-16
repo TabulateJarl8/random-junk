@@ -12,6 +12,8 @@ api_key = greatapikeyforcanvas123
 course_id = 234786
 ; ID of google drive folder containing uploaded assignments
 gdrive_folder_id = 3u829uhr3-32uhj89rh3
+; class folder path (relative to home directory)
+class_folder_path = school/12th/sem1/calc1
 ```
 
 My school git repository for precalc is located at `~/school/11th/sem1/precalc/`

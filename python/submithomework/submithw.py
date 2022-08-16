@@ -29,6 +29,7 @@ class HomeworkSubmitter:
 		self.CANVAS_TOKEN = config['config']['api_key']
 		self.COURSE_ID = config['config']['course_id']
 		self.GDRIVE_FOLDER_ID = config['config']['gdrive_folder_id']
+		self.CLASS_FOLDER_PATH = pathlib.Path(config['config']['class_folder_path'])
 
 		# If modifying these scopes, delete the file token.json.
 		self.SCOPES = [
@@ -136,7 +137,7 @@ class HomeworkSubmitter:
 
 	def write_assignment_to_school(self):
 		"""Write file to my school git repo"""
-		self.filepath = pathlib.Path.home() / pathlib.Path(f'school/11th/sem1/precalc/ch{self.assignment["unit_num"]}/{self.assignment["filename"]}')
+		self.filepath = pathlib.Path.home() / pathlib.Path(self.CLASS_FOLDER_PATH / f'/ch{self.assignment["unit_num"]}/{self.assignment["filename"]}')
 		if self.filepath.is_file():
 			print(f'Error: File exists: {str(self.filepath)}')
 			if input('Continue Anyway? [y/N] ').lower() != 'y':
