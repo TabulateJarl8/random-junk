@@ -38,7 +38,7 @@ def main():
 
 		blends = [
 			element for element in items
-			if re.match(r'^[^+]+\s\+\sTabulate, Playlist • Spotify', str(element.get('content-desc')))
+			if re.match(r'^[^+]+\s\+\s[^+]+, Playlist • Spotify', str(element.get('content-desc')))
 			and str(element.get('content-desc')).split(' + ')[0] not in [list(item.keys())[0] for item in done_blends] # prevent duplicates
 		]
 
