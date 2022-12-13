@@ -39,10 +39,10 @@ def retrieve_blend_information() -> list[dict[str, str]]:
 	d(text='Your Library').click()
 	
 	done_blends = []
-	last_item = ''
+	scroll = True
 
 	# loop until we have gone through everything in the library
-	while last_item is not None:
+	while scroll:
 		# get dump of everything on screen
 		logging.debug('Getting screen XML dump')
 		xml = ElementTree.fromstring(d.dump())
@@ -54,11 +54,7 @@ def retrieve_blend_information() -> list[dict[str, str]]:
 		][:5]
 
 		# detect when we get to the bottom of the screen
-		if ElementTree.tostring(items[-1]) == last_item:
-			last_item = None
-			logging.debug('Stopping scoll')
-		else:
-			last_item = ElementTree.tostring(items[-1])
+		scroll = not d(text='Add podcasts & shows').exists
 
 		# filter out blends from playlists
 		blends = [
