@@ -1,7 +1,7 @@
 """Program that will collect the compatibility with everyone that you have a spotify blend with. Just open the spotify app and run the program"""
 from xml.etree import ElementTree
 import re
-from uiautomator import Device, JsonRPCError
+from uiautomator import JsonRPCError, Device
 
 # logging and data loading
 import logging
@@ -37,7 +37,7 @@ def retrieve_blend_information() -> list[dict[str, str]]:
 	logging.debug('Creating device and opening library')
 	d = Device()
 	d(text='Your Library').click()
-	
+
 	done_blends = []
 	last_item = ''
 
@@ -140,6 +140,12 @@ if __name__ == '__main__':
 				data['people'][name] = []
 
 			data['people'][name].append(int(person_info[name]))
+
+			# pad data if it isn't the same length as the dates list (new person added)
+			
+			if len(data['people'][name]) < len(data['dates']):
+				for _ in range(len(data['dates']) - len(data['people'][name])):
+					data['people'][name].insert(0, None)
 
 		with open(datafile, 'w') as f:
 			json.dump(data, f)
