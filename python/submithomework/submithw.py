@@ -108,13 +108,13 @@ class HomeworkSubmitter:
 		homeworks = {
 			assignment['name']: assignment['id']
 			for assignment in assignments
-			if re.search(r'\d+', assignment['name']) and
-			'test' not in assignment['name'].lower() and
-			'quiz' not in assignment['name'].lower()
+#			if re.search(r'\d+', assignment['name']) and
+#			'test' not in assignment['name'].lower() and
+#			'quiz' not in assignment['name'].lower()
 		}
 
 		# sort by assignment number
-		homeworks = {key: value for key, value in sorted(homeworks.items(), key=lambda item: float(re.findall(r'^\D*(\d+(?:\.\d+)?)', item[0])[0]), reverse=True)}
+#		homeworks = {key: value for key, value in sorted(homeworks.items(), key=lambda item: float(re.findall(r'^\D*(\d+(?:\.\d+)?)', item[0])[0]), reverse=True)}
 
 		option, _ = pick.pick(list(homeworks.keys()), 'Choose an assignment', indicator='>>')
 
@@ -122,8 +122,8 @@ class HomeworkSubmitter:
 		form_url = re.search(r'href="(.*?)"', assignment_desc).group(1)
 
 		# floor unit num
-		unit_num = int(float(re.findall(r'^\D*(\d+(?:\.\d+)?)', option)[0]))
-
+#		unit_num = int(float(re.findall(r'^\D*(\d+(?:\.\d+)?)', option)[0]))
+		unit_num = 6
 		filename, fh = self.download_latest_file()
 
 		self.assignment = {
