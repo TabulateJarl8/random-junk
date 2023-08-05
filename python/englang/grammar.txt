@@ -1,1 +1,1 @@
-set a equal to 5. set b equal to 5. if a is equal to b then say "a is cool".
+set a equal number to 5. set b equal to 5. if a is equal to b then say "a is cool".

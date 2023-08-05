@@ -9,7 +9,7 @@ def transpile(tokens):
 				inst_value = inst.value
 				if inst.type == Type.STR:
 					inst_value = f'"{inst.value}"'
-				c_code.append(f'{inst.type.value} {inst.name}={inst_value};')
+				c_code.append(f'{inst.type.value} {inst.name}{"[]" if inst.type == Type.STR else ""}={inst_value};')
 		
 		elif isinstance(inst, Print):
 			c_code.append(f'printf("{inst.value}");')

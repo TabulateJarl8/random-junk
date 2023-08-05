@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import enum
 
 class Type(enum.Enum):
-	STR = "char[]"
+	STR = "char"
 	INT = "int"
 
 class VariableUse(enum.Enum):
