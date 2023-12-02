@@ -49,9 +49,6 @@ class Game:
 
 		return Game(id=id, colors=colors)
 
-	def max(self):
-		return max(self.colors)
-
 
 def main(filename: str):
 	with open(filename) as f:
