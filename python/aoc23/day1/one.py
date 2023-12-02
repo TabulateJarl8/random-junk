@@ -16,4 +16,5 @@ def main(filename):
 	return sum(numbers)
 
 
-print(main("data.txt"))
+if __name__ == "__main__":
+	print(main("input.txt"))

@@ -6,7 +6,7 @@ def main(filename: str):
 		data = f.readlines()
 
 	games = [Game.parse_line(line) for line in data]
-	constraints = Colors(red = 12, green = 13, blue = 14)
+	constraints = Colors(red=12, green=13, blue=14)
 
 	# calculate powers
 	power = 0
@@ -16,9 +16,8 @@ def main(filename: str):
 		maxblue = max([color.blue for color in game.colors])
 		power += maxred * maxgreen * maxblue
 
-
 	return power
 
 
-if __name__ == '__main__':
-	print(main('input.txt'))
+if __name__ == "__main__":
+	print(main("input.txt"))

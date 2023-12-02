@@ -15,7 +15,7 @@ def get_numbers(string: str) -> int:
 	}
 	numbers = "|".join(num_dict.keys())
 
-	r = re.findall(r"(?=(\d|" + numbers + '))', string)
+	r = re.findall(r"(?=(\d|" + numbers + "))", string)
 
 	match1 = num_dict.get(r[0], r[0])
 	match2 = num_dict.get(r[-1], r[-1])
@@ -35,4 +35,5 @@ def main(filename):
 	return sum(numbers)
 
 
-print(main("input.txt"))
+if __name__ == "__main__":
+	print(main("input.txt"))
