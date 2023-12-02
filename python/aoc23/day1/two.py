@@ -35,4 +35,4 @@ def main(filename):
 	return sum(numbers)
 
 
-print(main("data.txt"))
+print(main("input.txt"))
