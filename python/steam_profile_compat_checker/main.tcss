@@ -1,0 +1,27 @@
+Screen {
+	/* layout: grid;
+	grid-size: 2;
+	grid-gutter: 2; */
+	padding: 2;
+}
+
+#input-container {
+	layout: grid;
+	grid-size: 2;
+	grid-gutter: 2;
+	padding: 2;
+}
+
+Input.-valid {
+	border: tall $success 60%;
+}
+
+Input.-valid:focus {
+	border: tall $success;
+}
+
+DataTable {
+	padding-top: 2;
+	height: 16;
+	max-height: 16;
+}
