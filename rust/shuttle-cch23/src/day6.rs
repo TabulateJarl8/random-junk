@@ -9,7 +9,7 @@ fn find_elves(hidden_elves: String) -> Value {
     let shelf_no_elf_regex = Regex::new(r"(?<!elf on a )(shelf)").unwrap();
     let shelf_no_elf_count = match shelf_no_elf_regex.captures(&hidden_elves) {
         Ok(v) => match v {
-            Some(c) => {println!("{:?}", c); c.len()},
+            Some(c) => c.len() - 1,
             None => 0,
         },
         Err(_) => 0,
