@@ -1,5 +1,8 @@
 use fancy_regex::Regex;
-use rocket::{routes, post, serde::json::{Value, json}};
+use rocket::{
+    post, routes,
+    serde::json::{json, Value},
+};
 
 #[post("/6", data = "<hidden_elves>")]
 fn find_elves(hidden_elves: String) -> Value {
@@ -17,7 +20,6 @@ fn find_elves(hidden_elves: String) -> Value {
 
     json!({"elf": elf_count, "elf on a shelf": elf_shelf_count, "shelf with no elf on it": shelf_no_elf_count})
 }
-
 
 pub fn stage() -> rocket::fairing::AdHoc {
     rocket::fairing::AdHoc::on_ignite("DAY6", |rocket| async {

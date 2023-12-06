@@ -14,7 +14,7 @@ fn rocket() -> _ {
         .attach(day1::stage())
         .attach(day4::stage())
         .attach(day6::stage());
-    
+
     rocket
 
     // Ok(rocket.into())
