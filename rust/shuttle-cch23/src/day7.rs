@@ -14,9 +14,7 @@ use rocket::{
 fn base64_to_string(encoded: &str) -> Result<Value, anyhow::Error> {
     let bytes = general_purpose::STANDARD.decode(encoded)?;
 
-    Ok(serde::json::from_str(
-        &std::str::from_utf8(&bytes)?.to_string(),
-    )?)
+    Ok(serde::json::from_str(std::str::from_utf8(&bytes)?)?)
 }
 
 #[get("/7/decode")]
@@ -48,8 +46,7 @@ fn bake_cookies(cookies: &CookieJar<'_>) -> Value {
     // create intersection of the two to find the ingredients we need to iterate over
     let ingredients_intersection: HashSet<&str> = recipe_ingredients
         .intersection(&pantry_ingredients)
-        .into_iter()
-        .map(|s| *s)
+        .copied()
         .collect();
 
     // check that the intersection matches the entire recipe, if not, return nothing changed
