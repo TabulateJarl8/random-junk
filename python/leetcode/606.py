@@ -21,13 +21,13 @@ class Solution:
 		if root:
 			string = str(root.val)
 			if root.left:
-				string += f'({self.tree2str(root.left)})'
+				string += f"({self.tree2str(root.left)})"
 
 			if root.right:
 				if not root.left:
-					string += '()'
-				string += f'({self.tree2str(root.right)})'
+					string += "()"
+				string += f"({self.tree2str(root.right)})"
 
 			return string
 		else:
-			return ''
+			return ""
