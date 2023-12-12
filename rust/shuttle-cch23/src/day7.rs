@@ -30,11 +30,13 @@ fn bake_cookies(cookies: &CookieJar<'_>) -> Value {
     let pantry = &cookie_stats["pantry"];
 
     // create sets of recipe and pantry ingredients
+    // this also removes any keys with values of 0
     let recipe_ingredients: HashSet<&str> = recipe
         .as_object()
         .unwrap()
-        .keys()
-        .map(|s| s.as_str())
+        .iter()
+        .filter(|&(_, v)| v.as_f64().unwrap() > 0.0)
+        .map(|(key, _)| key.as_str())
         .collect();
     let pantry_ingredients: HashSet<&str> = pantry
         .as_object()
@@ -63,7 +65,12 @@ fn bake_cookies(cookies: &CookieJar<'_>) -> Value {
         .min()
         .unwrap();
 
-    let mut new_pantry: HashMap<&str, i64> = HashMap::new();
+    let mut new_pantry: HashMap<&str, i64> = pantry
+        .as_object()
+        .unwrap()
+        .iter()
+        .map(|(k, v)| (k.as_str(), v.as_i64().unwrap()))
+        .collect();
 
     // check that all ingredients were able to be fullfilled
     if num_cookies <= 0 {
@@ -72,10 +79,7 @@ fn bake_cookies(cookies: &CookieJar<'_>) -> Value {
 
     // everything is valid, calculate what is lost from the pantry
     for item in ingredients_intersection {
-        new_pantry.insert(
-            item,
-            pantry[item].as_i64().unwrap() - recipe[item].as_i64().unwrap() * num_cookies,
-        );
+        new_pantry.insert(item, new_pantry[item] - recipe[item].as_i64().unwrap() * num_cookies);
     }
 
     json!({
