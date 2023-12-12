@@ -79,7 +79,10 @@ fn bake_cookies(cookies: &CookieJar<'_>) -> Value {
 
     // everything is valid, calculate what is lost from the pantry
     for item in ingredients_intersection {
-        new_pantry.insert(item, new_pantry[item] - recipe[item].as_i64().unwrap() * num_cookies);
+        new_pantry.insert(
+            item,
+            new_pantry[item] - recipe[item].as_i64().unwrap() * num_cookies,
+        );
     }
 
     json!({

@@ -3,6 +3,7 @@ use rocket::launch;
 mod day0;
 mod day1;
 mod day11;
+mod day12;
 mod day4;
 mod day6;
 mod day7;
@@ -18,4 +19,5 @@ fn rocket() -> _ {
         .attach(day7::stage())
         .attach(day8::stage())
         .attach(day11::stage())
+        .attach(day12::stage())
 }
