@@ -7,9 +7,6 @@ from typing import List
 
 
 class Solution:
-    def findSpecialInteger(self, arr: List[int]) -> int:
-        counts = {
-            num: arr.count(num)
-            for num in set(arr)
-        }
-        return max(counts, key=lambda k: counts[k])
+	def findSpecialInteger(self, arr: List[int]) -> int:
+		counts = {num: arr.count(num) for num in set(arr)}
+		return max(counts, key=lambda k: counts[k])

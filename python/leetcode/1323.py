@@ -7,21 +7,22 @@ Return the maximum number you can get by changing at most one digit
 
 
 class Solution:
-    def maximum69Number(self, num: int) -> int:
-        orig_num = num
-        # get tens places
+	def maximum69Number(self, num: int) -> int:
+		orig_num = num
+		# get tens places
 
-        tens_places = 0
-        while num > 0:
-            num //= 10
-            tens_places += 1
+		tens_places = 0
+		while num > 0:
+			num //= 10
+			tens_places += 1
 
-        extractor = 10 ** (tens_places - 1)
+		extractor = 10 ** (tens_places - 1)
 
-        while extractor != 0 and (orig_num // extractor) % 10 != 6:
-            print(extractor, (orig_num // extractor) % 10)
-            extractor //= 10
+		while extractor != 0 and (orig_num // extractor) % 10 != 6:
+			print(extractor, (orig_num // extractor) % 10)
+			extractor //= 10
 
-        return orig_num + extractor * 3
+		return orig_num + extractor * 3
+
 
 print(Solution().maximum69Number(96699))
