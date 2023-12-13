@@ -13,7 +13,7 @@ class Solution:
 		cols = [[mat[j][i] for j in range(len(mat))] for i in range(len(mat[0]))]
 
 		special = 0
-		for index, row in enumerate(mat):
+		for row in mat:
 			if row.count(1) == 1 and cols[row.index(1)].count(1) == 1:
 				special += 1
 
