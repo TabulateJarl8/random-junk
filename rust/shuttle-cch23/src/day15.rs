@@ -18,7 +18,9 @@ struct Input<'r> {
 
 #[post("/15/nice", data = "<input>")]
 fn nice(input: Json<Input<'_>>) -> status::Custom<Value> {
-    let pat = Regex::new(r"(?=.*([A-Za-z])\1{1})(?=.*?[aeiouy].*?[aeiouy].*?[aeiouy])(?!.*(ab|cd|pq|xy))");
+    let pat = Regex::new(
+        r"(?=.*([A-Za-z])\1{1})(?=.*?[aeiouy].*?[aeiouy].*?[aeiouy])(?!.*(ab|cd|pq|xy))",
+    );
     match pat.unwrap().is_match(input.input) {
         Ok(v) => match v {
             true => status::Custom(Status::Ok, json!({"result":"nice"})),
@@ -30,7 +32,6 @@ fn nice(input: Json<Input<'_>>) -> status::Custom<Value> {
 
 #[post("/15/game", data = "<input>")]
 fn game(input: Json<Input<'_>>) -> status::Custom<Value> {
-    dbg!(&input.input);
     let string = input.input;
     if string.len() < 8 {
         return status::Custom(
@@ -59,9 +60,11 @@ fn game(input: Json<Input<'_>>) -> status::Custom<Value> {
         );
     }
 
-    let sum: u32 = Regex::new(r"[0-9]+").unwrap().find_iter(string).map(|n| n.unwrap().as_str().parse::<u32>().unwrap()).sum();
-
-    dbg!(sum);
+    let sum: u32 = Regex::new(r"[0-9]+")
+        .unwrap()
+        .find_iter(string)
+        .map(|n| n.unwrap().as_str().parse::<u32>().unwrap())
+        .sum();
 
     if sum != 2023 {
         return status::Custom(
@@ -70,10 +73,57 @@ fn game(input: Json<Input<'_>>) -> status::Custom<Value> {
         );
     }
 
-    if !Regex::new(r".*j.*o.*y.*").unwrap().is_match(string).unwrap() {
+    let joybuffer: String = string
+        .chars()
+        .filter(|c| ['j', 'o', 'y'].contains(c))
+        .collect();
+
+    if joybuffer != *"joy" {
         return status::Custom(
             Status::NotAcceptable,
             json!({"result":"naughty", "reason": "not joyful enough"}),
+        );
+    }
+
+    let sandwich = Regex::new(r"(?=.*([A-Za-z])[A-Za-z]\1)")
+        .unwrap()
+        .is_match(string)
+        .unwrap_or(false);
+
+    if !sandwich {
+        return status::Custom(
+            Status::UnavailableForLegalReasons,
+            json!({"result":"naughty", "reason": "illegal: no sandwich"}),
+        );
+    }
+
+    if string
+        .chars()
+        .filter(|c| (0x2980..=0x2BFF).contains(&(*c as u32)))
+        .count()
+        == 0
+    {
+        return status::Custom(
+            Status::RangeNotSatisfiable,
+            json!({"result":"naughty", "reason": "outranged"}),
+        );
+    }
+
+    if !string
+        .chars()
+        .map(|c| emojis::get(&c.to_string()))
+        .any(|c| c.is_some())
+    {
+        return status::Custom(
+            Status::UpgradeRequired,
+            json!({"result":"naughty", "reason": "😳"}),
+        );
+    }
+
+    if !sha256::digest(string).ends_with('a') {
+        return status::Custom(
+            Status::ImATeapot,
+            json!({"result":"naughty", "reason": "not a coffee brewer"}),
         );
     }
 
@@ -84,5 +134,7 @@ fn game(input: Json<Input<'_>>) -> status::Custom<Value> {
 }
 
 pub fn stage() -> rocket::fairing::AdHoc {
-    rocket::fairing::AdHoc::on_ignite("DAY15", |rocket| async { rocket.mount("/", routes![nice, game]) })
+    rocket::fairing::AdHoc::on_ignite("DAY15", |rocket| async {
+        rocket.mount("/", routes![nice, game])
+    })
 }
