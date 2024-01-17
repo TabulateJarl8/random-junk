@@ -1,4 +1,3 @@
-use rocket::launch;
 use rocket_db_pools::{sqlx, Database};
 use rocket_dyn_templates::Template;
 use shuttle_rocket::ShuttleRocket;
@@ -9,6 +8,8 @@ mod day11;
 mod day12;
 mod day13;
 mod day14;
+mod day15;
+mod day19;
 mod day4;
 mod day6;
 mod day7;
@@ -31,7 +32,9 @@ async fn rocket() -> ShuttleRocket {
         .attach(day12::stage())
         // .attach(day13::stage()).attach(DB::init())
         .attach(day14::stage())
-        .attach(Template::fairing());
+        .attach(Template::fairing())
+        .attach(day15::stage())
+        .attach(day19::stage());
 
     Ok(rocket.into())
 }
