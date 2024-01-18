@@ -1,0 +1,1 @@
+https://tabulate.tech/blog/college_range_assignment/

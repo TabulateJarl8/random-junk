@@ -1,6 +1,6 @@
-; Print "line i" for i in range(1,50)
+; Print "number i" for i in range(5,60)
 section .data
-	line_text db "line "
+	line_text db "number "
 	line_text_len equ $ - line_text
 
 	str_buffer db 0 ; for printing integers
@@ -116,9 +116,9 @@ print_integer:
 	ret
 
 _start:
-	mov rcx, 1
+	mov rcx, 5
 	loop_start:	
-		cmp rcx, 51 ; if at 51, jump to exit
+		cmp rcx, 61 ; if at 61, jump to exit
 		je exit
 
 		push rcx
