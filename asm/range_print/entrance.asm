@@ -15,7 +15,7 @@ section .text
 calculate_ten_power:
 	; calculate the power of 10 that corresponds to an integer
 	; for example, 100 for 543, 1000 for 8956, and 10000 for 15236
-
+	; takes an argument on the stack
 	; returns the integer in rcx
 
 	; rsp is the return address, add 8 to get the argument
@@ -40,8 +40,11 @@ calculate_ten_power:
 
 
 print_digit:
+	; print a digit
+	; takes an argument on the stack
+	; returns nothing
 	push rcx
-	mov rcx, [rsp+16]
+	mov rcx, [rsp+16] ; get the third argument on the stack. [return address (+0)] -> [rcx (+8)] -> [digit to print (+16)]
 	add rcx, '0' ; convert digit to ASCII
 
 	mov byte [str_buffer], cl ; assign lower 8 bits of rcx to buffer
