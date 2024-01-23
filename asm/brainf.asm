@@ -230,7 +230,6 @@ _start:
             jb      read_file_byte              ; we still have more to look through
 
 exit:
-
     ; exit
     mov     rax, 60
     xor     rdi, rdi
