@@ -188,6 +188,43 @@ inc_current_cell:
     mov     [stack + rsi], rax      ; overwrite the item with it's new value
     jmp     increment_file_ptr_and_continue
 
+; decrement the currently selected cell (stack_pointer)
+dec_current_cell:
+    mov     rsi, [stack_pointer]    ; the index of the current selected item in stack
+    mov     rax, [stack + rsi]      ; get the item at the current index in stack and store it in rax
+    dec     rax                     ; increment the item by 1
+
+    mov     [stack + rsi], rax      ; overwrite the item with it's new value
+    jmp     increment_file_ptr_and_continue
+
+; seek left
+seek_left:
+    mov     rax, [stack_pointer]    ; put the current stack pointer in rax
+    dec     rax                     ; decrement the stack pointer by one (move it to the left)
+    mov     [stack_pointer], rax    ; store new stack pointer
+    jmp     increment_file_ptr_and_continue
+
+; seek right
+seek_right:
+    mov     rax, [stack_pointer]    ; put the current stack pointer in rax
+    inc     rax                     ; increment the stack pointer by one (move it to the right)
+    mov     [stack_pointer], rax    ; store new stack pointer
+    jmp     increment_file_ptr_and_continue
+
+; print the currently selected cell
+print_current_cell:
+    mov     rax, [stack_pointer]    ; the index of the current selected item in stack
+    mov     rbx, [stack + rax]      ; get the item at the current index in stack and store it in rbx
+    push    rbx                     ; push rbx (the character to print) to the stack
+    mov     rsi, rsp                ; the address of what to print (top of stack)
+    mov     rax, 1                  ; write
+    mov     rdi, 1                  ; stdout
+    mov     rdx, 1                  ; len
+    syscall
+
+    add     rsp, 8                  ; pop character from stack
+    jmp     increment_file_ptr_and_continue
+
 _start:
     ; get arguments
     add     rsp, 16     ; skip argc and argv[0]
@@ -198,8 +235,9 @@ _start:
 
     call    read_file
 
-    mov     r12, rdi    ; buffer size
+    mov     r12, rdi    ; number of allocates bytes (pages)
     mov     r13, rax    ; buffer addr
+    mov     r14, rsi    ; buffer size 
 
     read_file_byte:
         mov     rsi, r13                    ; load buffer addr
@@ -208,6 +246,14 @@ _start:
 
         cmp     rax, '+'                    ; check if the current token is '+'
         je      inc_current_cell            ; it is, execute instruction
+        cmp     rax, '-'                    ; check if the current token is '-'
+        je      dec_current_cell            ; it is, execute instruction
+        cmp     rax, '<'                    ; check if the current token is '<'
+        je      seek_left                   ; it is, execute instruction
+        cmp     rax, '>'                    ; check if the current token is '>'
+        je      seek_right                  ; it is, execute instruction
+        cmp     rax, '.'                    ; check if the current token is '.'
+        je      print_current_cell          ; it is, execute instruction
 
         increment_file_ptr_and_continue:
             mov     rax, [file_buffer_offset]   ; load the current file buffer offset into rax
@@ -215,7 +261,7 @@ _start:
             mov     [file_buffer_offset], rax   ; save the new file buffer offset
 
             ; check if we've gone through the entire file
-            cmp     [file_buffer_offset], r12   ; check if file_buffer_offset < buffer size
+            cmp     [file_buffer_offset], r14   ; check if file_buffer_offset < buffer size
             jb      read_file_byte              ; we still have more to look through
 
 exit:
