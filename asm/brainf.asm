@@ -179,6 +179,23 @@ decrement_skip_loop:
     mov     [skip_loop_count], rsi      ; store rsi to skip_loop_count
     jmp increment_file_ptr_and_continue ; resume program
 
+; take 1 byte of user input and store it in the currently selected cell
+take_input:
+    xor     rax, rax    ; clear out rax just in case
+    push    rax         ; push rax onto the stack so we can read to it
+
+    mov     rsi, rsp    ; the address of the rax we just pushed
+    xor     rdi, rdi    ; stdin
+                        ; rax is already 0 (read) from when we xor'd it at the beginning
+    mov     rdx, 1      ; 1 byte
+    syscall
+
+    pop     rax                     ; pop rax for use
+    mov     rsi, [stack_pointer]    ; the index of the current selected item in stack
+    mov     [stack + rsi * 8], rax  ; put byte we read into the current cell
+
+    jmp increment_file_ptr_and_continue
+
 _start:
     ; get arguments
     add     rsp, 16     ; skip argc and argv[0]
@@ -219,6 +236,8 @@ _start:
         je      seek_right                  ; it is, execute instruction
         cmp     rax, '.'                    ; check if the current token is '.'
         je      print_current_cell          ; it is, execute instruction
+        cmp     rax, ','                    ; check if the current token is ','
+        je      take_input                  ; it is, execute instruction
 
         increment_file_ptr_and_continue:
             mov     rax, [file_buffer_offset]   ; load the current file buffer offset into rax
