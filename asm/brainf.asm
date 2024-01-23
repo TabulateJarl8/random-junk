@@ -1,8 +1,8 @@
 section .data
-    stack_pointer dw 0
-    file_buffer_offset dw 0
+    stack_pointer dq 0
+    file_buffer_offset dq 0
     str_buffer db 0
-    stack times 30000 dw 0
+    stack times 30000 dq 0
 
 section .text
     global _start
@@ -84,145 +84,138 @@ read_file:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 calculate_ten_power:
-	; calculate the power of 10 that corresponds to an integer
-	; for example, 100 for 543, 1000 for 8956, and 10000 for 15236
-	; takes an argument on the stack
-	; returns the integer in rcx
+    ; calculate the power of 10 that corresponds to an integer
+    ; for example, 100 for 543, 1000 for 8956, and 10000 for 15236
+    ; takes an argument on the stack
+    ; returns the integer in rcx
 
-	; rsp is the return address, add 8 to get the argument
-	mov rcx, [rsp+8] ; rcx should be the integer to find the power of 10 for
+    ; rsp is the return address, add 8 to get the argument
+    mov     rcx, [rsp+8]    ; rcx should be the integer to find the power of 10 for
 
-	mov rax, 1 ; we need to calculate the power of 10 that corresponds to rcx
-	; for example 100 for 543 and 1000 for 8753
-	mov rbx, 10
-	calculate_ten:
-		mul rbx
-		cmp rax, rcx
-		jg finish_power_ten ; if number is greater than target, divide by 10 and ret
-		jmp calculate_ten
+    mov     rax, 1          ; we need to calculate the power of 10 that corresponds to rcx
+                            ; for example 100 for 543 and 1000 for 8753
+    mov     rbx, 10         ; we're multiplying the value in rax by 10 each time, load into rbx
+    calculate_ten:
+        mul     rbx                 ; rax * rbx (10)
+        cmp     rax, rcx            ; compare rax to our target number
+        jg      finish_power_ten    ; if number is greater than target, divide by 10 and ret
+        jmp     calculate_ten       ; not greater than target, continue multiplying
 
-	finish_power_ten:
-		; divide ax by 10 to finish the calculation
-		xor rdx, rdx
-		div rbx
-		; now rax contains the power of 10
-		mov rcx, rax
-	ret
+    finish_power_ten:
+        xor     rdx, rdx    ; clear our rdx (remainder)
+        div     rbx         ; divide rax by 10 to finish the calculation
+                            ; now rax contains the power of 10
+        mov     rcx, rax    ; put rax in rcx
+        ret
 
 
 print_digit:
-	; print a digit
-	; takes an argument on the stack
-	; returns nothing
-	push rcx
-	mov rcx, [rsp+16] ; get the third argument on the stack. [return address (+0)] -> [rcx (+8)] -> [digit to print (+16)]
-	add rcx, '0' ; convert digit to ASCII
+    ; print a digit
+    ; takes an argument on the stack
+    ; returns nothing
+    push    rcx                     ; push rcx to the stack
+    mov     rcx, [rsp+16]           ; get the third argument on the stack. [return address (+0)] -> [rcx (+8)] -> [digit to print (+16)]
+    add     rcx, '0'                ; convert digit to ASCII
 
-	mov byte [str_buffer], cl ; assign lower 8 bits of rcx to buffer
+    mov     byte [str_buffer], cl   ; assign lower 8 bits of rcx to buffer
 
-	mov rsi, str_buffer ; buffer pointer
-	mov rax, 1 ; write
-	mov rdi, 1 ; stdout
-	mov rdx, 1 ; len
-	syscall   ; call kernel
+    mov     rsi, str_buffer         ; buffer pointer
+    mov     rax, 1                  ; write
+    mov     rdi, 1                  ; stdout
+    mov     rdx, 1                  ; len
+    syscall                         ; call kernel
 
-	pop rcx ; restore rcx
+    pop     rcx                     ; restore rcx
 
-	ret
+    ret
 
 
 print_integer:
-	; takes the integer in from rax
-	push rax ; push rax it for the next function to consume
-	call calculate_ten_power ; power of 10 is now in rcx
+    ; takes the integer to print in from rax
+    push    rax                 ; push rax it for the next function to consume
+    call    calculate_ten_power ; power of 10 is now in rcx
 
-	pop rax ; mov the argument (number to print) that was pushed into rax
+    pop     rax                 ; mov the argument (number to print) that was pushed into rax
 
-	iter_number:
-		; num_to_print: rax
-		; base_10_place: rcx
-		; formula for accessing number: (num_to_print // base_10_place) % 10
-		; base_10_place is the power of 10 that corresponds to the place of number to print
-		; using 123 for example, 100 will get the 1, 10 will get the 2, and 1 will get the 3
+    iter_number:
+        ; num_to_print: rax
+        ; base_10_place: rcx
+        ; formula for accessing number: (num_to_print // base_10_place) % 10
+        ; base_10_place is the power of 10 that corresponds to the place of number to print
+        ; using 123 for example, 100 will get the 1, 10 will get the 2, and 1 will get the 3
 
-		; first, make sure we have a copy of rax
-		push rax
+        push    rax         ; first, make sure we have a copy of rax
 
-		; 10 for use in modulo
-		mov rbx, 10
+        mov     rbx, 10     ; 10 for use in modulo
 
-		; next, floor divide rax by rcx
-		xor rdx, rdx
-		div rcx
-		; result is stored in rax, mod 10
-		; clear out rdx because thats where remainder is stored
-		xor rdx, rdx
-		div rbx
-
-		; rdx now contains our digit to print
-		push rdx
-		call print_digit
-		add rsp, 8 ; remove the rdx that never got popped from print_digit from the stack
+        
+        xor     rdx, rdx    ; clear out rdx (remainder)
+        div     rcx         ; next, floor divide rax by rcx (num_to_print // base_10_place)
+                            ; result is stored in rax, mod 10
+        xor     rdx, rdx    ; clear out rdx because thats where remainder is stored
+        div     rbx         ; divide rax by rbx (rax % 10)
+                            ; rdx now contains our digit to print
+        push    rdx         ; save rdx
+        call    print_digit ; print the digit we extracted
+        add     rsp, 8      ; remove the rdx that never got popped from print_digit from the stack
 
 
-		; check if rcx is equal to 1. if so, we just did the last digit
-		mov rax, 1
-		cmp rax, rcx
-		je exit_print_integer
+        mov     rax, 1
+        cmp     rax, rcx            ; check if rcx is equal to 1. if so, we just did the last digit
+        je      exit_print_integer  ; we juts did the last digit, exit printing
 
-		; divide out power of 10 by 10 to get the next digit
-		xor rdx, rdx
-		mov rbx, 10
-		mov rax, rcx
+        xor     rdx, rdx    ; clear rdx (remainder)
+        mov     rbx, 10     ; put 10 in rbx
+        mov     rax, rcx    ; put our power of 10 in rax
 
-		div rbx
-		mov rcx, rax
+        div     rbx         ; divide power of 10 by 10 to get the next digit
+        mov     rcx, rax    ; move result into rcx
 
-		; restore our original number to print
-		pop rax
+        pop     rax         ; restore our original number to print
 
-		; loop to iter_number until rcx is 1 (we've done the last digit)
-		jmp iter_number
+        jmp iter_number     ; loop to iter_number until rcx is 1 (we've done the last digit)
 
-	exit_print_integer:
-	pop rax ; pop off our original number so that we return to the correct address
+    exit_print_integer:
+        pop     rax     ; pop off our original number so that we return to the correct address
+        ret
 
-	ret
-
+; increment the currently selected cell (stack_pointer)
 inc_current_cell:
-    mov rsi, stack_pointer
-    mov al, [stack + rsi]
+    mov     rsi, [stack_pointer]    ; the index of the current selected item in stack
+    mov     rax, [stack + rsi]      ; get the item at the current index in stack and store it in rax
+    inc     rax                     ; increment the item by 1
 
-    inc al
-    mov [stack + rsi], al
-    jmp increment_file_ptr_and_continue
+    mov     [stack + rsi], rax      ; overwrite the item with it's new value
+    jmp     increment_file_ptr_and_continue
 
 _start:
     ; get arguments
     add     rsp, 16     ; skip argc and argv[0]
     pop     rdi         ; get first argument as file to read
 
-    call read_file
+    cmp     rdi, 0      ; check for no arguments
+    je      exit
+
+    call    read_file
 
     mov     r12, rdi    ; buffer size
     mov     r13, rax    ; buffer addr
 
     read_file_byte:
-        mov rsi, [file_buffer_offset]
         mov     rsi, r13                    ; load buffer addr
         add     rsi, [file_buffer_offset]   ; increment it to get our current token
         movzx   rax, byte [rsi]             ; load the current token into rax
-        cmp     rax, '+'
-        je inc_current_cell
+
+        cmp     rax, '+'                    ; check if the current token is '+'
+        je      inc_current_cell            ; it is, execute instruction
 
         increment_file_ptr_and_continue:
-            ; increment file buffer pointer by 1
-            mov rax, [file_buffer_offset]
-            inc rax
-            mov [file_buffer_offset], rax
+            mov     rax, [file_buffer_offset]   ; load the current file buffer offset into rax
+            inc     rax                         ; increment file buffer pointer by 1
+            mov     [file_buffer_offset], rax   ; save the new file buffer offset
 
             ; check if we've gone through the entire file
-            cmp     [file_buffer_offset], r12  ; check if file_buffer_offset < buffer size
+            cmp     [file_buffer_offset], r12   ; check if file_buffer_offset < buffer size
             jb      read_file_byte              ; we still have more to look through
 
 exit:
