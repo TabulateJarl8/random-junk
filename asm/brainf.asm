@@ -97,21 +97,21 @@ dec_current_cell:
     mov     [stack + rsi * 8], rax      ; overwrite the item with it's new value
     jmp     increment_file_ptr_and_continue
 
-; seek left
+; seek left instruction. increments the stack pointer by 1
 seek_left:
     mov     rax, [stack_pointer]    ; put the current stack pointer in rax
     dec     rax                     ; decrement the stack pointer by one (move it to the left)
     mov     [stack_pointer], rax    ; store new stack pointer
     jmp     increment_file_ptr_and_continue
 
-; seek right
+; seek right instruction. decrements the stack pointer by 1
 seek_right:
     mov     rax, [stack_pointer]    ; put the current stack pointer in rax
     inc     rax                     ; increment the stack pointer by one (move it to the right)
     mov     [stack_pointer], rax    ; store new stack pointer
     jmp     increment_file_ptr_and_continue
 
-; print the currently selected cell
+; print the currently selected cell as ASCII
 print_current_cell:
     mov     rax, [stack_pointer]    ; the index of the current selected item in stack
     mov     rbx, [stack + rax * 8]  ; get the item at the current index in stack and store it in rbx
@@ -125,6 +125,7 @@ print_current_cell:
     add     rsp, 8                  ; pop character from stack
     jmp     increment_file_ptr_and_continue
 
+; instructions for starting a loop (`[`)
 start_loop:
     ; first, we check if we're currently skipping a loop
     ; this can happen if the current cell is 0 when '[' is encountered
@@ -144,19 +145,19 @@ start_loop:
                                         ; now we can pop the stack and jump to read_file_byte to restart the loop
     jmp increment_file_ptr_and_continue ; resume program flow
 
-; increment the skip loop and continue program flow
+; increment the skip loop count and continue program flow
 increment_skip_loop:
     mov     rsi, [skip_loop_count]      ; load skip loop count into rsi
     inc     rsi                         ; increment rsi by 1
     mov     [skip_loop_count], rsi      ; store rsi to skip_loop_count
     jmp increment_file_ptr_and_continue ; resume program
 
+; instructions for ending a loop (`]`)
 end_loop:
     ; first, we check if we are currently skipping a loop
     mov     rsi, [skip_loop_count]  ; load loop count into rsi
     cmp     rsi, 0
     jg      decrement_skip_loop     ; if rsi > 0; decrement the skip by 1
-
 
     ; now, we know that we aren't currently skipping a loop. check if we should continue the loop or not
     pop     rax                                 ; pop the top item of the stack (instruction pointer) into rax
@@ -171,6 +172,7 @@ end_loop:
     mov     [file_buffer_offset], rax   ; set that item as the current file buffer
     jmp read_file_byte                  ; loop to reading the file at that byte
 
+; decrement the skip loop count and continue program flow
 decrement_skip_loop:
     mov     rsi, [skip_loop_count]      ; load skip loop count into rsi
     dec     rsi                         ; decrement rsi by 1
