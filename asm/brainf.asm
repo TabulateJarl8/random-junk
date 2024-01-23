@@ -9,11 +9,11 @@ section .text
 
 ; Read a file into a buffer and return it
 ; inputs:
-;     rdi : filename
+;       rdi : filename
 ; outputs:
-;     rax : file contents buffer
-;     rdi : number of bytes allocated
-;     rsi : the size of the buffer allocation
+;       rax : file contents buffer
+;       rdi : number of bytes allocated
+;       rsi : the size of the buffer allocation
 read_file:
     ; open file
     mov     rax, 2      ; open
