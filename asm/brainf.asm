@@ -1,8 +1,8 @@
 section .data
-    stack_pointer dq 0
-    file_buffer_offset dq 0
-    str_buffer db 0
-    stack times 30000 dq 0
+    stack_pointer       dq 0    ; the index of the currently selected stack item
+    file_buffer_offset  dq 0    ; the index of the current token in the file
+    skip_loop_count     dq 0    ; how many closing ']' to skip
+    stack times 30000   dq 0    ; the stack
 
 section .text
     global _start
@@ -79,122 +79,22 @@ read_file:
 
     ret
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Integer printing system ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-calculate_ten_power:
-    ; calculate the power of 10 that corresponds to an integer
-    ; for example, 100 for 543, 1000 for 8956, and 10000 for 15236
-    ; takes an argument on the stack
-    ; returns the integer in rcx
-
-    ; rsp is the return address, add 8 to get the argument
-    mov     rcx, [rsp+8]    ; rcx should be the integer to find the power of 10 for
-
-    mov     rax, 1          ; we need to calculate the power of 10 that corresponds to rcx
-                            ; for example 100 for 543 and 1000 for 8753
-    mov     rbx, 10         ; we're multiplying the value in rax by 10 each time, load into rbx
-    calculate_ten:
-        mul     rbx                 ; rax * rbx (10)
-        cmp     rax, rcx            ; compare rax to our target number
-        jg      finish_power_ten    ; if number is greater than target, divide by 10 and ret
-        jmp     calculate_ten       ; not greater than target, continue multiplying
-
-    finish_power_ten:
-        xor     rdx, rdx    ; clear our rdx (remainder)
-        div     rbx         ; divide rax by 10 to finish the calculation
-                            ; now rax contains the power of 10
-        mov     rcx, rax    ; put rax in rcx
-        ret
-
-
-print_digit:
-    ; print a digit
-    ; takes an argument on the stack
-    ; returns nothing
-    push    rcx                     ; push rcx to the stack
-    mov     rcx, [rsp+16]           ; get the third argument on the stack. [return address (+0)] -> [rcx (+8)] -> [digit to print (+16)]
-    add     rcx, '0'                ; convert digit to ASCII
-
-    mov     byte [str_buffer], cl   ; assign lower 8 bits of rcx to buffer
-
-    mov     rsi, str_buffer         ; buffer pointer
-    mov     rax, 1                  ; write
-    mov     rdi, 1                  ; stdout
-    mov     rdx, 1                  ; len
-    syscall                         ; call kernel
-
-    pop     rcx                     ; restore rcx
-
-    ret
-
-
-print_integer:
-    ; takes the integer to print in from rax
-    push    rax                 ; push rax it for the next function to consume
-    call    calculate_ten_power ; power of 10 is now in rcx
-
-    pop     rax                 ; mov the argument (number to print) that was pushed into rax
-
-    iter_number:
-        ; num_to_print: rax
-        ; base_10_place: rcx
-        ; formula for accessing number: (num_to_print // base_10_place) % 10
-        ; base_10_place is the power of 10 that corresponds to the place of number to print
-        ; using 123 for example, 100 will get the 1, 10 will get the 2, and 1 will get the 3
-
-        push    rax         ; first, make sure we have a copy of rax
-
-        mov     rbx, 10     ; 10 for use in modulo
-
-        
-        xor     rdx, rdx    ; clear out rdx (remainder)
-        div     rcx         ; next, floor divide rax by rcx (num_to_print // base_10_place)
-                            ; result is stored in rax, mod 10
-        xor     rdx, rdx    ; clear out rdx because thats where remainder is stored
-        div     rbx         ; divide rax by rbx (rax % 10)
-                            ; rdx now contains our digit to print
-        push    rdx         ; save rdx
-        call    print_digit ; print the digit we extracted
-        add     rsp, 8      ; remove the rdx that never got popped from print_digit from the stack
-
-
-        mov     rax, 1
-        cmp     rax, rcx            ; check if rcx is equal to 1. if so, we just did the last digit
-        je      exit_print_integer  ; we juts did the last digit, exit printing
-
-        xor     rdx, rdx    ; clear rdx (remainder)
-        mov     rbx, 10     ; put 10 in rbx
-        mov     rax, rcx    ; put our power of 10 in rax
-
-        div     rbx         ; divide power of 10 by 10 to get the next digit
-        mov     rcx, rax    ; move result into rcx
-
-        pop     rax         ; restore our original number to print
-
-        jmp iter_number     ; loop to iter_number until rcx is 1 (we've done the last digit)
-
-    exit_print_integer:
-        pop     rax     ; pop off our original number so that we return to the correct address
-        ret
-
 ; increment the currently selected cell (stack_pointer)
 inc_current_cell:
-    mov     rsi, [stack_pointer]    ; the index of the current selected item in stack
-    mov     rax, [stack + rsi]      ; get the item at the current index in stack and store it in rax
-    inc     rax                     ; increment the item by 1
+    mov     rsi, [stack_pointer]        ; the index of the current selected item in stack
+    mov     rax, [stack + rsi * 8]      ; get the item at the current index in stack and store it in rax
+    inc     rax                         ; increment the item by 1
 
-    mov     [stack + rsi], rax      ; overwrite the item with it's new value
+    mov     [stack + rsi * 8], rax      ; overwrite the item with it's new value
     jmp     increment_file_ptr_and_continue
 
 ; decrement the currently selected cell (stack_pointer)
 dec_current_cell:
-    mov     rsi, [stack_pointer]    ; the index of the current selected item in stack
-    mov     rax, [stack + rsi]      ; get the item at the current index in stack and store it in rax
-    dec     rax                     ; increment the item by 1
+    mov     rsi, [stack_pointer]        ; the index of the current selected item in stack
+    mov     rax, [stack + rsi * 8]      ; get the item at the current index in stack and store it in rax
+    dec     rax                         ; decrement the item by 1
 
-    mov     [stack + rsi], rax      ; overwrite the item with it's new value
+    mov     [stack + rsi * 8], rax      ; overwrite the item with it's new value
     jmp     increment_file_ptr_and_continue
 
 ; seek left
@@ -214,7 +114,7 @@ seek_right:
 ; print the currently selected cell
 print_current_cell:
     mov     rax, [stack_pointer]    ; the index of the current selected item in stack
-    mov     rbx, [stack + rax]      ; get the item at the current index in stack and store it in rbx
+    mov     rbx, [stack + rax * 8]  ; get the item at the current index in stack and store it in rbx
     push    rbx                     ; push rbx (the character to print) to the stack
     mov     rsi, rsp                ; the address of what to print (top of stack)
     mov     rax, 1                  ; write
@@ -224,6 +124,58 @@ print_current_cell:
 
     add     rsp, 8                  ; pop character from stack
     jmp     increment_file_ptr_and_continue
+
+start_loop:
+    ; first, we check if we're currently skipping a loop
+    ; this can happen if the current cell is 0 when '[' is encountered
+    mov     rsi, [skip_loop_count]  ; load loop count into rsi
+    cmp     rsi, 0
+    jg      increment_skip_loop     ; if rsi > 0; increment the skip by 1
+
+    ; now, we know that we aren't currently skipping a loop. check if we should be skipping the upcoming loop
+    mov     rsi, [stack_pointer]    ; the index of the current selected item in stack
+    mov     rax, [stack + rsi * 8]  ; get the item at the current index in stack and store it in rax
+    cmp     rax, 0                  ; check if current cell is zero
+    je      increment_skip_loop     ; if current_cell == 0; increment the skip counter
+
+    ; we don't need to skip the loop, push the instruction ptr to the stack
+    mov     rax, [file_buffer_offset]   ; load file buffer offset into rax
+    push    rax                         ; push rax to stack
+                                        ; now we can pop the stack and jump to read_file_byte to restart the loop
+    jmp increment_file_ptr_and_continue ; resume program flow
+
+; increment the skip loop and continue program flow
+increment_skip_loop:
+    mov     rsi, [skip_loop_count]      ; load skip loop count into rsi
+    inc     rsi                         ; increment rsi by 1
+    mov     [skip_loop_count], rsi      ; store rsi to skip_loop_count
+    jmp increment_file_ptr_and_continue ; resume program
+
+end_loop:
+    ; first, we check if we are currently skipping a loop
+    mov     rsi, [skip_loop_count]  ; load loop count into rsi
+    cmp     rsi, 0
+    jg      decrement_skip_loop     ; if rsi > 0; decrement the skip by 1
+
+
+    ; now, we know that we aren't currently skipping a loop. check if we should continue the loop or not
+    pop     rax                                 ; pop the top item of the stack (instruction pointer) into rax
+                                                ; we pop this off now because we need to pop it whether we're ending or not
+
+    mov     rsi, [stack_pointer]                ; the index of the current selected item in stack
+    mov     rbx, [stack + rsi * 8]              ; get the item at the current index in stack and store it in rbx
+    cmp     rbx, 0                              ; check if current cell is zero
+    je      increment_file_ptr_and_continue     ; if current_cell == 0; dont repeat the loop
+
+    ; we must repeat the loop
+    mov     [file_buffer_offset], rax   ; set that item as the current file buffer
+    jmp read_file_byte                  ; loop to reading the file at that byte
+
+decrement_skip_loop:
+    mov     rsi, [skip_loop_count]      ; load skip loop count into rsi
+    dec     rsi                         ; decrement rsi by 1
+    mov     [skip_loop_count], rsi      ; store rsi to skip_loop_count
+    jmp increment_file_ptr_and_continue ; resume program
 
 _start:
     ; get arguments
@@ -243,6 +195,17 @@ _start:
         mov     rsi, r13                    ; load buffer addr
         add     rsi, [file_buffer_offset]   ; increment it to get our current token
         movzx   rax, byte [rsi]             ; load the current token into rax
+
+        ; loops are executed before loop checking to calculate the correct exit point
+        cmp     rax, '['                    ; check if the current token is '['
+        je      start_loop                  ; it is, execute instruction
+        cmp     rax, ']'                    ; check if the current token is ']'
+        je      end_loop                    ; it is, execute instruction
+
+        ; check if we are inside a loop that we are skipping
+        mov     rbx, [skip_loop_count]              ; load skip_loop_count into rbx
+        cmp     rbx, 0                              ; if rbx > 0
+        jg      increment_file_ptr_and_continue     ; skip the current token and continue
 
         cmp     rax, '+'                    ; check if the current token is '+'
         je      inc_current_cell            ; it is, execute instruction
@@ -267,6 +230,6 @@ _start:
 exit:
 
     ; exit
-    mov     rax, 60     ; exit
+    mov     rax, 60
     xor     rdi, rdi
     syscall
