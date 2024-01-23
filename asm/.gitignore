@@ -3,3 +3,4 @@
 !*.*
 !.gitignore
 *.o
+.gdb_history
