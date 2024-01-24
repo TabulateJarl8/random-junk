@@ -39,11 +39,14 @@ calculate_ten_power:
 ;       rsi : the digit to print
 print_digit:
     add     rsi, '0'                ; convert digit to ASCII
-
+    push    rsi                     ; put the digit on the stack
+    mov     rsi, rsp                ; put pointer to stack for *buf
     mov     rax, 1                  ; write
     mov     rdi, 1                  ; stdout
     mov     rdx, 1                  ; len
     syscall                         ; call kernel
+
+    add     rsp, 8                  ; remove digit from stack
 
     ret
 
@@ -76,7 +79,9 @@ print_integer:
         div     rbx         ; divide rax by rbx (rax % 10)
                             ; rdx now contains our digit to print
         mov     rsi, rdx    ; move rdx into rsi
+        push    rcx         ; preserve our power of 10
         call    print_digit ; print the digit we extracted
+        pop     rcx         ; pop the power of 10 from the stack
 
         mov     rax, 1
         cmp     rax, rcx            ; check if rcx is equal to 1. if so, we just did the last digit
