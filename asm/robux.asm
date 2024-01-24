@@ -1,7 +1,7 @@
 section .data
-    string_buffer times 34  db 0
-    string_buffer_len       equ $ - string_buffer
-    filename_len            equ string_buffer_len - 4 ; subtract 4 for the extension
+    string_buffer times 35  db 0
+    string_buffer_len       equ $ - string_buffer       ; string buffer lenth
+    filename_len            equ string_buffer_len - 5   ; subtract 5 for the extension and null byte at the end
     first_half              db "HERE IS "
     first_half_len          equ $ - first_half
     second_half             db " ROBUXES FOR YOU!!!!"
@@ -184,8 +184,8 @@ write_integer:
 ;       rbx : the number of robux
 write_file:
     ; open file
+    mov     rdi, rax                ; filename
     mov     rax, 2                  ; open
-    mov     rdi, filename           ; filename
     mov     rsi, 0x241              ; O_WRONLY | O_CREAT | O_TRUNC
     mov     rdx, 0o644              ; file permissions
     syscall                         ; stores fd in rax
@@ -218,22 +218,15 @@ write_file:
 
 ; null out the string buffer variable
 clear_string_buffer:
-    mov     rdi, string_buffer      ; load address of string buffer into rdi
-    mov     rsi, string_buffer_len  ; length of string buffer
-    xor     rcx, rcx                ; index counter
-    xor     rax, rax                ; null character
-
-    clear_char:
-        mov     [rdi + rcx], al     ; move null byte into current char address
-        inc     rcx                 ; increment index counter
-        cmp     rcx, rsi            ; check if we've reached the end of the string
-        jl      clear_char
-
-        ret
+    mov     rdi, string_buffer          ; move address of string_buffer to rdi
+    mov     rax, 0                      ; byte to write
+    mov     rcx, string_buffer_len / 8  ; amount of bytes to write
+    rep     stosq
+    ret
 
 ; create a filename between 1-30 characters with a random 3 character extension
 ; outputs:
-;       rax - the filename
+;       clears string_buffer and fills it with a random filename
 create_filename:
     call    clear_string_buffer     ; clear the string buffer
 
@@ -241,31 +234,49 @@ create_filename:
     mov     rax, 1                  ; min - 1
     mov     rbx, filename_len       ; max
     call    randint                 ; rax contains our filename length
-    add     rax, 4                  ; add 4 to the length for the extension
+    add     rax, 4                  ; add 4 to the length for the extension. the length will now be at least 5
     mov     r13, rax                ; move our length into r13
+    xor     r12, r12                ; initialize a counter
 
     generate_char:
-        xor     rax, rax            ; min - 0
-        mov     character_set_len   ; max
-        call    randint             ; get a random integer
-                                    ; rax contains our random int now
-        
-        dec     r13                 ; decrement our counter
-        cmp     r13, 0              ; check if we've reached the end of the loop
-        je      create_filename_ext ; we have, create the extension
+        mov     rsi, r13                            ; our full string length
+        sub     rsi, 4                              ; subtract 4 from the string length (the position for the . in the filename)
+        cmp     r12, rsi                            ; should we be inserting a . or a character
+        je      insert_dot                          ; we should be, insert a .
+        xor     rax, rax                            ; min - 0
+        mov     rbx, character_set_len              ; max
+        call    randint                             ; get a random integer
+                                                    ; rax contains our random int now
+
+        mov     al, [character_set + rax]           ; load the selected character into al
+        mov     [string_buffer + r12], al           ; get the randomly selected character and append it to the string buffer
+
+        inc     r12                                 ; increment our counter
+        cmp     r12, r13                            ; check if we've reached the end of the loop
+        je      finish_filename                     ; we have, return
+        jmp     generate_char                       ; we're not done, create another character
+
+    insert_dot:
+        mov     byte [string_buffer + r12], 0x2e    ; append '.' to the string buffer
+        inc     r12                                 ; increment our loop counter
+        jmp     generate_char                       ; continue generation
+
+    finish_filename:
+        ret
 
 _start:
     call    srand   ; seed rng
     mov     r14, 0  ; store robux amount in r14
 
     file_creation_loop:
-        call    create_filename     ; create a filename and store it in rax
+        call    create_filename     ; create a filename and store it in string_buffer
+        mov     rax, string_buffer  ; put address of string_buffer in rax
         mov     rbx, r14            ; move robux count to rbx
         call    write_file          ; write the file
         inc     r14                 ; increment robux count by 1
-        ; jmp file_creation_loop  ; create another file
+        jmp     file_creation_loop  ; create another file
 
     exit:
-        mov rax, 60
-        mov rdi, 0
+        mov     rax, 60
+        mov     rdi, 0
         syscall ; call kernel
