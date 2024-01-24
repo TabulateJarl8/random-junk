@@ -218,18 +218,11 @@ write_file:
 
 ; null out the string buffer variable
 clear_string_buffer:
-    mov     rdi, string_buffer      ; load address of string buffer into rdi
-    mov     rsi, string_buffer_len  ; length of string buffer
-    xor     rcx, rcx                ; index counter
-    xor     rax, rax                ; null character
-
-    clear_char:
-        mov     [rdi + rcx], al     ; move null byte into current char address
-        inc     rcx                 ; increment index counter
-        cmp     rcx, rsi            ; check if we've reached the end of the string
-        jl      clear_char
-
-        ret
+    mov     rdi, string_buffer          ; move address of string_buffer to rdi
+    mov     rax, 0                      ; byte to write
+    mov     rcx, string_buffer_len / 8  ; amount of bytes to write
+    rep     stosq
+    ret
 
 ; create a filename between 1-30 characters with a random 3 character extension
 ; outputs:
