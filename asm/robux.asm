@@ -1,7 +1,7 @@
 section .data
-    string_buffer times 34  db 0
-    string_buffer_len       equ $ - string_buffer
-    filename_len            equ string_buffer_len - 4 ; subtract 4 for the extension
+    string_buffer times 35  db 0
+    string_buffer_len       equ $ - string_buffer       ; string buffer lenth
+    filename_len            equ string_buffer_len - 5   ; subtract 5 for the extension and null byte at the end
     first_half              db "HERE IS "
     first_half_len          equ $ - first_half
     second_half             db " ROBUXES FOR YOU!!!!"
