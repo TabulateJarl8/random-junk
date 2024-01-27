@@ -11,7 +11,12 @@ anyhow = "1.0.79"
 eframe = "0.25.0"
 egui = "0.25.0"
 rfd = "0.13.0"
+
+[target.'cfg(not(windows))'.dependencies]
 sequoia-openpgp = "1.17.0"
+
+[target.'cfg(windows)'.dependencies]
+sequoia-openpgp = { version = "1.17.0", default-features = false, features = ["compression", "crypto-cng"] }
 
 [profile.release]
 strip = true
