@@ -2,7 +2,7 @@
 
 I was bored and wanted to write some more assembly so I decided a web server would be a pretty interesting thing to write. I was able to learn how web servers actually work at an operating system level which I've never actually bothered to learn, so that was pretty cool.
 
- - `web_server.asm` - this contains the actual web server that I wrote. It currently has the ability to bind to 127.0.0.1:8000 and serve an `index.html` in the same directory. If the `index.html` isn't present, the client is presented with an nginx-like 404 page. In the future, I may add:
+ - `web_server.asm` - this contains the actual web server that I wrote. It currently has the ability to bind to 127.0.0.1:8000 and serve an `index.html` in the same directory. If the `index.html` isn't present, the client is presented with an nginx-like 404 page. There is also support for a 500 error if something else goes wrong when reading the file. In the future, I may add:
    - [x] Specifying a port as an argument
    - [ ] Ability to render all HTML files in a `pages/` folder dynamically from the URL
    - [x] Better error reporting (error messages and exit with errno code)

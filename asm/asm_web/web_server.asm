@@ -430,7 +430,6 @@ error_500:
 ;   4 - socket accept error
 ;   5 - socket read error
 ;   6 - socket write error
-
 exit:
     mov     r15, rdi                    ; save the error code
     neg     rax                         ; negate rax to see real errno
