@@ -35,12 +35,12 @@ section .data
     original_sock_fd dq 0
     accepted_sock_fd dq 0
 
-    default_port db "8000", 0 ; default port value
+    default_port db "8000", 0 ; default port value as a string
 
 section .bss
     client_read_buffer resb BUFFER_READ_SIZE
     custom_port_string resb 6 ; 5 digit port + null
-    port resw 1
+    port resw 1 ; port value as an integer
 
 section .text
     global _start
