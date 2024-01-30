@@ -25,8 +25,15 @@ section .data
         db "HTTP/1.0 404 Not Found", 0xa
         db "Server: TabulateASM", 0xa
         db "Content-Type: text/html", 0xa, 0xa
-        db "<html><head><title>404 - Page Not Found</title></head><body><center><h1>404 Not Found</h1></center><hr></body></html>"
+        db "<html><head><title>Page Not Found</title></head><body><center><h1>404 Not Found</h1></center><hr></body></html>"
     http_404_resp_len equ $ - http_404_resp
+
+    http_500_resp:
+        db "HTTP/1.0 500 Internal Server Error", 0xa
+        db "Server: TabulateASM", 0xa
+        db "Content-Type: text/html", 0xa, 0xa
+        db "<html><head><title>Internal Server Error</title></head><body><center><h1>500 Internal Server Error</h1></center><hr></body></html>"
+    http_500_resp_len equ $ - http_500_resp
 
     filename db "index.html", 0
 
@@ -70,6 +77,8 @@ read_file:
     mov     rax, 8      ; lseek
     syscall
 
+    test    rax, rax    ; test if we couldn't seek the file
+    js      error_500   ; throw 500 error
 
     ; determine number of bytes to allocate
     mov     r15, rax    ; save filesize
@@ -90,8 +99,10 @@ read_file:
     mov     rax, 9      ; mmap
     syscall
 
+    test    rax, rax    ; test if we couldn't allocate memory
+    js      error_500   ; throw 500 error
+
     ; rax has ptr to allocated memory
-    ; NOTE: not checking for errors (rax == -1)
     mov     r12, rax    ; save addr of buffer
 
     ; rewind the file
@@ -101,6 +112,9 @@ read_file:
     mov     rax, 8      ; lseek
     syscall
 
+    test    rax, rax    ; test if we couldn't rewind the file
+    js      error_500   ; throw 500 error
+
     ; read file into buffer
     mov     rdx, r13    ; number of bytes to read
     mov     rsi, r12    ; addr of buffer
@@ -108,10 +122,15 @@ read_file:
     mov     rax, 0      ; read
     syscall
 
+    test    rax, rax    ; test if we couldn't read the file
+    js      error_500   ; throw 500 error
+
     ; close file
     mov     rax, 3      ; close
     mov     rdi, r14    ; fd
     syscall
+    ; we can probably ignore errors when closing the file
+    ; whats the worst that could happen
 
     ; return buffer
     mov     rax, r12    ; buffer
@@ -382,6 +401,18 @@ _start:
 error_404:
     mov     rsi, http_404_resp      ; http 404 response
     mov     rdx, http_404_resp_len  ; http 404 response length
+    mov     rax, [accepted_sock_fd] ; socket fd
+    call    sock_write              ; write to the socket
+
+    mov     rax, [accepted_sock_fd] ; load the current socket fd into rax
+    call    sock_close              ; try to close the socket
+
+    jmp     connection_loop         ; accept more connections
+
+; throw a 500 error and return to accepting connections
+error_500:
+    mov     rsi, http_500_resp      ; http 500 response
+    mov     rdx, http_500_resp_len  ; http 500 response length
     mov     rax, [accepted_sock_fd] ; socket fd
     call    sock_write              ; write to the socket
 
