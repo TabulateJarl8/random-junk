@@ -1,6 +1,9 @@
 section .data
-    server_ready_msg db  "Bound and listening on 127.0.0.1:8000...", 0xa
-    server_ready_msg_len equ $ - server_ready_msg
+    server_ready_msg_pt1 db "Bound and listening on http://127.0.0.1:"
+    server_ready_msg_pt1_len equ $ - server_ready_msg_pt1
+
+    server_ready_msg_pt2 db  "...", 0xa
+    server_ready_msg_pt2_len equ $ - server_ready_msg_pt2
 
     http_200_resp:
         db "HTTP/1.0 200 OK", 0xa
@@ -22,8 +25,12 @@ section .data
     original_sock_fd dq 0
     accepted_sock_fd dq 0
 
+    default_port db "8000", 0 ; default port value
+
 section .bss
     client_read_buffer resb BUFFER_READ_SIZE
+    custom_port_string resb 6 ; 5 digit port + null
+    port resw 1
 
 section .text
     global _start
@@ -147,9 +154,13 @@ sock_bind:
     mov     rdi, rax            ; move socket fd into rdi
 
     ; set up sockaddr struct in the stack. see bind(2)
+    xor     rax, rax            ; clear out rax
+    mov     ax, [port]          ; load port variable
+    xchg    al, ah              ; htons(port)
+
     push    dword   0           ; 4-byte address padding
     push    dword   0x0100007F  ; 127.0.0.1
-    push    word    0x401f      ; 8000 (htons(port))
+    push    ax                  ; port
     push    word    2           ; AF_INET
 
     mov     rax, 49             ; bind
@@ -225,7 +236,77 @@ sock_write:
 
     ret                             ; write was successful, return
 
+; convert a string value to an integer and store it in the port variable
+; inputs:
+;       rax : the string number
+; outputs:
+;       rax : the integer number
+setup_port:
+    xor     cx, cx                      ; the result value
+    mov     rdi, custom_port_string     ; store port string address
+
+    test    rax, rax                    ; check if input is 0
+    jnz     convert_digit               ; dont set a default port since one was provided
+
+    mov     rax, default_port           ; default port
+
+    convert_digit:
+        movzx   rdx, byte [rax]         ; load current character
+        cmp     rdx, 0                  ; check for end of string
+        je      finish_int_conversion   ; we're finished
+
+        ; check for invalid characters
+        cmp     rdx, '0'
+        jl      skip_storing_number     ; check lower bound
+        cmp     rdx, '9'
+        jg      skip_storing_number     ; check upper bound
+
+        mov     [rdi], dl               ; append current character to string representation variable
+        sub     rdx, '0'                ; convert ascii to integer
+        imul    cx, cx, 10              ; multiple result by 1 to increase the tens place
+        add     cx, dx                  ; add current digit to sum
+
+        inc     rax                     ; increment to next digit
+        inc     rdi                     ; increment the index of the character we're appending to the string repr
+        jmp     convert_digit           ; continue loop
+
+
+
+    finish_int_conversion:
+        mov     [port], cx              ; store final value in port variable
+
+        skip_storing_number: ret
+
+; print server ready message
+print_server_ready_msg:
+    mov     rax, 1                          ; write
+    mov     rdi, 1                          ; stdout
+    mov     rsi, server_ready_msg_pt1       ; buffer
+    mov     rdx, server_ready_msg_pt1_len   ; buffer length
+    syscall
+
+    mov     rax, 1                          ; write
+    mov     rdi, 1                          ; stdout
+    mov     rsi, custom_port_string         ; port string
+    mov     rdx, 6                          ; the port string length
+    syscall
+
+    mov     rax, 1                          ; write
+    mov     rdi, 1                          ; stdout
+    mov     rsi, server_ready_msg_pt2       ; buffer
+    mov     rdx, server_ready_msg_pt2_len   ; buffer length
+    syscall
+
+    ret
+
 _start:
+    ; get arguments
+    add     rsp, 16                 ; skip argc and argv[0]
+    pop     rdi                     ; get first argument as file to read
+
+    mov     rax, rdi                ; store our argument in rax
+    call    setup_port              ; attempt to store string in port
+
     call    create_socket           ; create a socket and store it in rax
     mov     [original_sock_fd], rax ; save socket fd in original_sock_fd
 
@@ -236,12 +317,7 @@ _start:
     mov     rax, [original_sock_fd] ; put the socket fd into rax
     call    sock_listen             ; make the socket listen
 
-    ; print server ready message
-    mov     rax, 1                      ; write
-    mov     rdi, 1                      ; stdout
-    mov     rsi, server_ready_msg       ; buffer
-    mov     rdx, server_ready_msg_len   ; buffer length
-    syscall
+    call print_server_ready_msg     ; print the server ready message
 
     connection_loop:
         mov     rax, [original_sock_fd] ; put the socket fd into rax
