@@ -5,6 +5,16 @@ section .data
     server_ready_msg_pt2 db  "...", 0xa
     server_ready_msg_pt2_len equ $ - server_ready_msg_pt2
 
+    error_messages:
+        db "Error in socket creation",          0xa
+        db "Error in socket bind", 0, 0, 0, 0,  0xa
+        db "Error in socket listen", 0, 0,      0xa
+        db "Error in socket accept", 0, 0,      0xa
+        db "Error in socket read", 0, 0, 0, 0,  0xa
+        db "Error in socket write", 0, 0, 0,    0xa
+
+    error_message_length equ 25
+
     http_200_resp:
         db "HTTP/1.0 200 OK", 0xa
         db "Server: TabulateASM", 0xa
@@ -391,14 +401,24 @@ error_404:
 ;   6 - socket write error
 
 exit:
-    mov     r15, rdi                ; save the error code
-    neg     rax                     ; negate rax to see errno in debugging
-    mov     rax, [accepted_sock_fd] ; load the current socket fd into rax
-    call    sock_close              ; try to close the socket
-    mov     rax, [original_sock_fd] ; load the original socket fd into rax
-    call    sock_close              ; try to close the socket
+    mov     r15, rdi                    ; save the error code
+    neg     rax                         ; negate rax to see real errno
+    mov     r14, rax                    ; save the errno code
+    mov     rax, [accepted_sock_fd]     ; load the current socket fd into rax
+    call    sock_close                  ; try to close the socket
+    mov     rax, [original_sock_fd]     ; load the original socket fd into rax
+    call    sock_close                  ; try to close the socket
 
-    mov     rax, r14                ; restore rax
+    mov     rbx, error_message_length   ; get the length of each error message
+    imul    rbx, r15                    ; multiply by the index of the error
+    sub     rbx, error_message_length   ; subtract the error message length since error codes start with 1
+
+    mov     rax, 1                      ; write
+    mov     rdi, 1                      ; stdout
+    lea     rsi, [error_messages + rbx] ; error message buffer address
+    mov     rdx, error_message_length   ; length of error messages
+    syscall
+
     mov     rax, 60                 ; exit
-    mov     rdi, r15                ; restore the error code
+    mov     rdi, r14                ; restore the errno code
     syscall
