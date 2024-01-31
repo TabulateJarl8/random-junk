@@ -6,6 +6,7 @@ I was bored and wanted to write some more assembly so I decided a web server wou
    - [x] Specifying a port as an argument
    - [x] Ability to render all HTML files in a `pages/` folder dynamically from the URL
      - This  feature has now been implemented. Any files in the `pages/` directory will be served on the web root. In addition, the web server automatically resolves any paths with a trailing `/` to `/index.html`. For example, `/super/` will resolve to `pages/super/index.html`, allowing for more readable web addresses.
+     - NOTE: This is very secure and definitely does not expose the entire filesystem. I couldn't seem to get a webbrowser to do it, but I was able to use netcat to request files relatively using `..`.
    - [x] Better error reporting (error messages and exit with errno code)
  - `web_server_better.asm` - this contains a super cool and super complex web server that just runs `nginx`, as suggested by a member of the JMU Unix Users Group.
 
