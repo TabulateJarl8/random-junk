@@ -21,6 +21,13 @@ section .data
         db "Content-Type: text/html", 0xa, 0xa
     http_200_resp_len equ $ - http_200_resp
 
+    http_400_resp:
+        db "HTTP/1.0 400 Bad Request", 0xa
+        db "Server: TabulateASM", 0xa
+        db "Content-Type: text/html", 0xa, 0xa
+        db "<html><head><title>Bad Request</title></head><body><center><h1>400 Bad Request</h1></center><hr></body></html>"
+    http_400_resp_len equ $ - http_400_resp
+
     http_404_resp:
         db "HTTP/1.0 404 Not Found", 0xa
         db "Server: TabulateASM", 0xa
@@ -35,7 +42,8 @@ section .data
         db "<html><head><title>Internal Server Error</title></head><body><center><h1>500 Internal Server Error</h1></center><hr></body></html>"
     http_500_resp_len equ $ - http_500_resp
 
-    filename db "index.html", 0
+    default_filename db "index.html", 0
+    default_filename_len equ $ - default_filename
 
     BUFFER_READ_SIZE equ 2048
 
@@ -44,10 +52,18 @@ section .data
 
     default_port db "8000", 0 ; default port value as a string
 
+    web_page_directory db "pages"
+    web_page_directory_len equ $ - web_page_directory
+
+    max_filesize equ 255
+
+    path_filename_len equ max_filesize + web_page_directory_len
+
 section .bss
     client_read_buffer resb BUFFER_READ_SIZE
     custom_port_string resb 6 ; 5 digit port + null
     port resw 1 ; port value as an integer
+    path_filename resb max_filesize + web_page_directory_len ; pages + /filename
 
 section .text
     global _start
@@ -151,14 +167,85 @@ print_first_line:
         cmp     al, 0xa             ; compare current character with newline
         jne     check_for_newline   ; check the next character, we haven't found the newline
 
-    end_newline_loop:
-        mov     rax, 1              ; write
-        mov     rdi, 1              ; stdout
-                                    ; rsi already contains our buffer address
-        mov     rdx, rcx            ; our counter contains the amount of data to print
-        syscall
+    mov     rax, 1              ; write
+    mov     rdi, 1              ; stdout
+                                ; rsi already contains our buffer address
+    mov     rdx, rcx            ; our counter contains the amount of data to print
+    syscall
 
-        ret
+    ret
+
+; parse the filename out of a GET request header. throws a 400 if not GET
+; i think this can crash the server if the filename is too long
+; this does indeed crash the server
+; inputs:
+;       rdi : the address of the request header buffer
+; outputs:
+;       [path_filename] : a buffer containing the relative path to the requested file
+parse_filename_from_get:
+    cmp     byte [rdi],     'G'         ; check for a GET request
+    jne     error_400                   ; not a GET request, throw a 400 error
+    cmp     byte [rdi + 1], 'E'         ; check for a GET request
+    jne     error_400                   ; not a GET request, throw a 400 error
+    cmp     byte [rdi + 2], 'T'         ; check for a GET request
+    jne     error_400                   ; not a GET request, throw a 400 error
+
+    mov     rbx, rdi                    ; preserve request header buffer address
+
+    ; clear the previous filename buffer
+    mov     rdi, path_filename          ; destination address
+    mov     rcx, path_filename_len      ; number of bytes to overwrite
+    xor     rax, rax                    ; set rax to NULL
+    rep     stosb                       ; set all bytes to null
+
+    ; set up path filename variable with the directory containing html documents 
+    mov     rdi, path_filename          ; destination address
+    mov     rsi, web_page_directory     ; source address
+    mov     rcx, web_page_directory_len ; size of string to copy
+    rep     movsb                       ; copy the string
+
+    mov     rdi, rbx                    ; restore request header buffer address
+
+    ; this is a GET request, get the file path
+    add     rdi, 4      ; skip past 'GET ' and start at the filename
+    xor     rcx, rcx    ; start a counter
+
+    check_for_space:
+        mov     al, [rdi + rcx]         ; load current character into rax
+        inc     rcx                     ; increment the counter
+        cmp     al, 0x20                ; check if the current character is a space (end of filename)
+        jne     check_for_space         ; we haven't found it yet, continue
+
+    ; we found the end, copy it into the path_filename buffer
+    dec     rcx                         ; dont count the space at the end
+
+    ; check if the ending character is a '/' (replace it with index.html)
+    xor     rbx, rbx                    ; add index.html flag
+    cmp     byte [rdi + rcx - 1], '/'   ; check if last char is '/'
+    jne     skip_index_html_flag        ; if its not, then we dont need to change the rbx flag
+
+    mov     rbx, rcx                    ; set rbx to non-zero (amount of bytes in page name) to trigger addition of index.html
+
+    skip_index_html_flag:  
+    ; write the path from the URL into the path_filename variable
+    mov     rsi, rdi                                    ; put our source string into rsi
+    mov     rdi, path_filename + web_page_directory_len ; destination address (skips 'pages')
+                                                        ; rcx already contains our count
+    rep     movsb                                       ; copy the string into the destination
+
+    cmp     rbx, 0                                      ; check if we need to append index.html
+    je      skip_append_index_html                      ; we dont need to, skip to the end
+
+    ; append index.html
+    mov     rsi, default_filename                       ; source address
+    mov     rdi, path_filename + web_page_directory_len ; dest address ('pages' + len(page))
+    add     rdi, rbx                                    ; + len(page)
+
+    mov     rcx, default_filename_len                   ; amount of data to copy
+    rep     movsb                                       ; copy string
+
+    skip_append_index_html:
+    ret
 
 ; create a socket and return it's file descriptor. exits on error
 ; outputs:
@@ -330,23 +417,23 @@ print_server_ready_msg:
 
 _start:
     ; get arguments
-    add     rsp, 16                 ; skip argc and argv[0]
-    pop     rdi                     ; get first argument as file to read
+    add     rsp, 16                     ; skip argc and argv[0]
+    pop     rdi                         ; get first argument as file to read
 
-    mov     rax, rdi                ; store our argument in rax
-    call    setup_port              ; attempt to store string in port
+    mov     rax, rdi                    ; store our argument in rax
+    call    setup_port                  ; attempt to store string in port
 
-    call    create_socket           ; create a socket and store it in rax
-    mov     [original_sock_fd], rax ; save socket fd in original_sock_fd
+    call    create_socket               ; create a socket and store it in rax
+    mov     [original_sock_fd], rax     ; save socket fd in original_sock_fd
 
     ; bind
-                                    ; rax contains the socket fd
-    call    sock_bind               ; bind the socket to 127.0.0.1:8000
+                                        ; rax contains the socket fd
+    call    sock_bind                   ; bind the socket to 127.0.0.1:8000
 
-    mov     rax, [original_sock_fd] ; put the socket fd into rax
-    call    sock_listen             ; make the socket listen
+    mov     rax, [original_sock_fd]     ; put the socket fd into rax
+    call    sock_listen                 ; make the socket listen
 
-    call print_server_ready_msg     ; print the server ready message
+    call print_server_ready_msg         ; print the server ready message
 
     connection_loop:
         mov     rax, [original_sock_fd] ; put the socket fd into rax
@@ -367,7 +454,10 @@ _start:
         mov     rsi, client_read_buffer ; the headers we recieved from the client
         call    print_first_line        ; print the first line for logging purposes
 
-        mov     rdi, filename           ; the filename to respond with
+        mov     rdi, client_read_buffer
+        call    parse_filename_from_get
+
+        mov     rdi, path_filename      ; the filename to respond with
         call    read_file               ; read the file. rax is contents buffer, rsi is size of buffer. rdi is the size of the pages allocated
 
         mov     r13, rax                ; preserve values
@@ -409,8 +499,21 @@ error_404:
 
     jmp     connection_loop         ; accept more connections
 
+; throw a 400 error and return to accepting connections
+error_400:
+    mov     rsi, http_400_resp      ; http 400 response
+    mov     rdx, http_400_resp_len  ; http 400 response length
+    mov     rax, [accepted_sock_fd] ; socket fd
+    call    sock_write              ; write to the socket
+
+    mov     rax, [accepted_sock_fd] ; load the current socket fd into rax
+    call    sock_close              ; try to close the socket
+
+    jmp     connection_loop         ; accept more connections
+
 ; throw a 500 error and return to accepting connections
 error_500:
+    neg     rax                     ; negative rax for debugging (errno)
     mov     rsi, http_500_resp      ; http 500 response
     mov     rdx, http_500_resp_len  ; http 500 response length
     mov     rax, [accepted_sock_fd] ; socket fd
