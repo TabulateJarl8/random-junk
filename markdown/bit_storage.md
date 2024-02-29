@@ -100,10 +100,10 @@ const EVENODD: u8 = 0b10;
 fn read() {
     let mut value = 0b1011;
 
-    if value & FILL {
+    if value & FILL != 0 {
         // FILL is set
     }
-    if value & EVENODD {
+    if value & EVENODD != 0 {
         // EVENODD is set
     }
 }
@@ -127,10 +127,10 @@ fn read() {
     // if value isnt mutable, you can just create a new variable instead of doing in-place assignment
     value >>= 2;
     
-    if value & StrokeType::NoStroke {
-
-    } else if value & StrokeType::RoundCap {
-
+    if value & StrokeType::NoStroke as u8 != 0 {
+        // NoStroke is set
+    } else if value & StrokeType::RoundCap as u8 != 0 {
+        // RoundCap is set
     } ... {
 
     }
