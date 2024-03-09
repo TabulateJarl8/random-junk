@@ -8,9 +8,9 @@ description = "Utility for sending me an encrypted file encrypted via PGP"
 
 [dependencies]
 anyhow = "1.0.79"
-eframe = "0.25.0"
-egui = "0.25.0"
-rfd = "0.13.0"
+eframe = "0.26.2"
+egui = "0.26.2"
+rfd = "0.14.0"
 
 [target.'cfg(not(windows))'.dependencies]
 sequoia-openpgp = "1.17.0"
