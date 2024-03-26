@@ -54,7 +54,7 @@ def retrieve_blend_information() -> list[dict[str, str]]:
 		][:5]
 
 		# detect when we get to the bottom of the screen
-		scroll = not d(text='Add podcasts & shows').exists
+		scroll = not d(text='Add artists').exists
 
 		# filter out blends from playlists
 		blends = [
