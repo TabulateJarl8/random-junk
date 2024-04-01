@@ -20,7 +20,7 @@ def check_dependencies():
 			sys.exit(1)
 
 	# check tesseract data
-	search_path = [Path(os.environ.get('TESSDATA_PREFIX', '')), Path('/usr/share/tessdata/eng.traineddata')]
+	search_path = [Path(os.environ.get('TESSDATA_PREFIX', '')), Path('/usr/share/tessdata/')]
 	tesseract_data_found = False
 	for path in search_path:
 		if (path / 'eng.traineddata').exists():
@@ -77,9 +77,9 @@ def transcode_to_mp4():
 	pass
 
 def main():
-	pass
+	check_dependencies()
 
 if __name__ == '__main__':
 	main()
-	print(extract_subtitle_tracks(Path('office_rip/OFFICE_S2D3/B1_t00.mkv')))
-	convert_subtitles(Path('office_rip/OFFICE_S2D3/B1_t00.mkv'), '3')
+	print(extract_subtitle_tracks(Path('/home/tabulate/Videos/office_rip/OFFICE_S2D3/B1_t00.mkv')))
+	convert_subtitles(Path('/home/tabulate/Videos/office_rip/OFFICE_S2D3/B1_t00.mkv'), '3')
