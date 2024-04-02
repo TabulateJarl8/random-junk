@@ -9,7 +9,6 @@ import tempfile
 
 def check_dependencies():
 	# check tesseract
-	# /usr/share/tessdata/eng.traineddata
 	binaries = ["tesseract", "subtile-ocr", "HandBrakeCLI", "mkvextract", "mkvmerge"]
 
 	for file in binaries:
@@ -40,15 +39,16 @@ def check_dependencies():
 		sys.exit(1)
 
 
-def extract_subtitle_tracks(filename: Path) -> list:
+def extract_subtitle_tracks(filename: Path) -> list[int]:
 	"""Extract the subtitle tracks for user prompting
 
 	Args:
-			filename (Path): file path to an MKV video
+		filename (Path): file path to an MKV video
 
 	Returns:
-			list: the regex matches of the mkvinfo output
+		list[int]: the track IDs of the english subtitle tracks
 	"""
+	# Run mkvmerge to identify the tracks in the MKV file
 	mkv_info = subprocess.run(
 		[
 			"mkvmerge",
@@ -59,14 +59,19 @@ def extract_subtitle_tracks(filename: Path) -> list:
 		],
 		capture_output=True,
 	)
+	# Ensure mkvmerge ran successfully
 	mkv_info.check_returncode()
 
+	# Load the JSON output of mkvmerge and get the list of tracks
 	tracklist = json.loads(mkv_info.stdout.decode()).get("tracks", [])
 
+	# Filter the list to extract only English subtitle tracks
 	return [
 		track["id"]
 		for track in tracklist
-		if track["type"] == "subtitles" and track["properties"]["language"] == "eng"
+		if track["type"] == "subtitles"
+		and track["properties"]["language"] == "eng"
+		and track["properties"]["codec_id"] == "S_VOBSUB"
 	]
 
 
@@ -74,13 +79,16 @@ def convert_subtitles(filename: Path, track_number: str):
 	"""Convert subtitles into srt file with OCR.
 
 	Args:
-			filename (Path): the filename of the MKV file
-			track_number (str): the track number of the English subtitles
+		filename (Path): the filename of the MKV file
+		track_number (str): the track number of the English subtitles
 	"""
+	# Define the output SRT filename
+	# should be `original_stem.eng.srt`
 	srt_filename = filename.with_suffix(".eng.srt").resolve()
 
+	# Use a temporary directory to work with subtitle files
 	with tempfile.TemporaryDirectory() as tempd:
-		# extract the VODSUB subtitles
+		# Extract the VODSUB subtitles from the MKV file
 		subprocess.run(
 			[
 				"mkvextract",
@@ -102,7 +110,9 @@ def convert_subtitles(filename: Path, track_number: str):
 			]
 		).check_returncode()
 
+	# Open the new SRT file for applying small OCR fixes
 	with srt_filename.open("r+") as f:
+		# read the file
 		data = f.read()
 		f.seek(0)
 
@@ -114,6 +124,7 @@ def convert_subtitles(filename: Path, track_number: str):
 			.replace("”", '"')
 		)
 
+		# write the correct data back to the file
 		f.write(data)
 		f.truncate()
 
