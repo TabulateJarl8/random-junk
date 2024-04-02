@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import os
 import shutil
 import sys
@@ -7,9 +8,26 @@ import json
 import tempfile
 
 
+@dataclass
+class MP4File:
+	filename: Path
+	track_number: int
+
+	def __init__(self, filename: str, track_number: int):
+		self.filename = Path(filename)
+		self.track_number = track_number
+
+
 def check_dependencies():
 	# check tesseract
-	binaries = ["tesseract", "subtile-ocr", "HandBrakeCLI", "mkvextract", "mkvmerge"]
+	binaries = [
+		"tesseract",
+		"subtile-ocr",
+		"HandBrakeCLI",
+		"mkvextract",
+		"mkvmerge",
+		"ffmpeg",
+	]
 
 	for file in binaries:
 		if shutil.which(file) is None:
@@ -129,8 +147,90 @@ def convert_subtitles(filename: Path, track_number: str):
 		f.truncate()
 
 
-def transcode_to_mp4():
-	pass
+def transcode_to_mp4_files(filename: Path, audio_track_files: list[MP4File]):
+	"""Transcode an MKV into an MP4, creating a new MP4 for each specified audio track.
+
+	Args:
+		filename (Path): the path to the file
+		audio_track_files (list[MP4File]): The MP4 filenames and their respective track IDs
+	"""
+
+
+	with tempfile.TemporaryDirectory() as tempd:
+		mp4_filename = Path(tempd) / filename.with_suffix(".mp4").name
+
+		# transcode the master file to mp4
+		subprocess.run(
+			[
+				"HandBrakeCLI",
+				"--preset",
+				"Fast 480p30",
+				"-i",
+				filename.resolve(),
+				"-s",
+				"none",
+				"-o",
+				mp4_filename,
+				"--audio-lang-list",
+				"eng",
+				"--all-audio",
+			]
+		).check_returncode()
+
+		for track in audio_track_files:
+			track_filename = track.filename.name
+			track_id = track.track_number
+
+			subprocess.run(
+				[
+					"ffmpeg",
+					"-i",
+					mp4_filename,
+					"-map",
+					"0:v",
+					"-map",
+					f"0:a:{track_id}",
+					"-c:v",
+					"copy",
+					"-c:a",
+					"copy",
+					filename.parent / track_filename,
+				]
+			).check_returncode()
+
+
+def get_audio_track_names(filename: Path) -> list[str]:
+	"""Get the names of the audio tracks within an MKV file
+
+	Args:
+		filename (Path): the path to the MKV
+
+	Returns:
+		list[str]: the names of the audio tracks in the MKV
+	"""
+	# Run mkvmerge to identify the tracks in the MKV file
+	mkv_info = subprocess.run(
+		[
+			"mkvmerge",
+			"--identify",
+			"--identification-format",
+			"json",
+			filename.resolve(),
+		],
+		capture_output=True,
+	)
+	# # Ensure mkvmerge ran successfully
+	mkv_info.check_returncode()
+
+	# Load the JSON output of mkvmerge and get the list of tracks
+	tracklist = json.loads(mkv_info.stdout.decode()).get("tracks", [])
+
+	# Filter the list to extract only English subtitle tracks
+	return [
+		track["properties"]["track_name"]
+		for track in tracklist
+		if track["type"] == "audio" and track["properties"]["language"] == "eng"
+	]
 
 
 def main():
@@ -139,11 +239,18 @@ def main():
 
 if __name__ == "__main__":
 	main()
-	print(
-		extract_subtitle_tracks(
-			Path("/home/tabulate/Videos/office_rip/OFFICE_S2D3/B1_t00.mkv")
-		)
+	mkv_path = Path(
+		"/run/media/tabulate/largeDisk/jellyfin/rips/office_rip/OFFICE/s1e1.mkv"
 	)
-	convert_subtitles(
-		Path("/home/tabulate/Videos/office_rip/OFFICE_S2D3/B1_t00.mkv"), "3"
-	)
+	# print(
+	# 	extract_subtitle_tracks(
+	# 		mkv_path
+	# 	)
+	# )
+	# convert_subtitles(
+	# 	mkv_path,
+	# 	"4",
+	# )
+
+	print(transcode_to_mp4_files(mkv_path, [MP4File('test_norm.mp4', 0), MP4File('test_comm_1.mp4', 1), MP4File('test_comm_2.mp4', 2)]))
+	# transcode_to_mp4_files(mkv_path)
