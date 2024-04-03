@@ -399,6 +399,8 @@ def parse_arguments():
 	)
 	parser.add_argument('--dest-dir', dest='dest_dir', type=file_type, help='The destination directory to write to')
 	parser.add_argument('--captions', dest='captions', action='store_true', help='Only generate captions for the specified file')
+	parser.add_argument('--captions-index', dest='captions_index', default=0, help='The index of the captions to generate. Skips non-english tracks')
+	parser.add_argument('--captions-filename', dest='captions_filename', type=lambda x: Path(x), help='Optional output filename for the captions file')
 	return parser.parse_args()
 
 
@@ -411,14 +413,14 @@ def main():
 		if mkv_path.is_dir():
 			for file in mkv_path.glob('*.mkv'):
 				try:
-					subtitle_id = extract_subtitle_tracks(file)[0]
-					convert_subtitles(file, subtitle_id, None, args.dest_dir)
+					subtitle_id = extract_subtitle_tracks(file)[int(args.captions_index)]
+					convert_subtitles(file, subtitle_id, args.captions_filename, args.dest_dir)
 				except IndexError:
 					pass
 			sys.exit(0)
 		else:
-			subtitle_id = extract_subtitle_tracks(mkv_path)[0]
-			convert_subtitles(mkv_path, subtitle_id, None, args.dest_dir)
+			subtitle_id = extract_subtitle_tracks(mkv_path)[int(args.captions_index)]
+			convert_subtitles(mkv_path, subtitle_id, args.captions_filename, args.dest_dir)
 			sys.exit(0)
 
 	if mkv_path.is_dir():
