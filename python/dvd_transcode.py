@@ -7,6 +7,7 @@ from pathlib import Path
 import subprocess
 import json
 import tempfile
+import readline  # noqa: F401
 from typing import Optional, Union
 
 
@@ -123,7 +124,7 @@ def convert_subtitles(
 		srt_filename = output_filename.with_suffix(".eng.srt").resolve()
 
 	if dest_dir is not None and dest_dir.exists():
-		srt_filename = dest_dir / srt_filename
+		srt_filename = dest_dir / srt_filename.name
 	elif dest_dir is not None and not dest_dir.exists():
 		print('ERROR: destination directory `{dest_dir}` does not exist. Exiting...')
 		sys.exit(1)
@@ -388,7 +389,8 @@ def parse_arguments():
 	parser.add_argument(
 		"file_path", type=file_type, help="The path to a file or directory"
 	)
-	parser.add_argument('--dest-dir', type=file_type, help='The destination directory to write to')
+	parser.add_argument('--dest-dir', dest='dest_dir', type=file_type, help='The destination directory to write to')
+	parser.add_argument('--captions', dest='captions', action='store_true', help='Only generate captions for the specified file')
 	return parser.parse_args()
 
 
@@ -396,6 +398,21 @@ def main():
 	check_dependencies()
 	args = parse_arguments()
 	mkv_path: Path = args.file_path
+
+	if args.captions:
+		if mkv_path.is_dir():
+			for file in mkv_path.glob('*.mkv'):
+				try:
+					subtitle_id = extract_subtitle_tracks(file)[0]
+					convert_subtitles(file, subtitle_id, None, args.dest_dir)
+				except IndexError:
+					pass
+			sys.exit(0)
+		else:
+			subtitle_id = extract_subtitle_tracks(mkv_path)[0]
+			convert_subtitles(mkv_path, subtitle_id, None, args.dest_dir)
+			sys.exit(0)
+
 	if mkv_path.is_dir():
 		process_directory(mkv_path, args.dest_dir)
 	else:
