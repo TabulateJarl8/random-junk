@@ -318,6 +318,9 @@ def prompt_audio_track_names(filename: Path) -> list[MP4File]:
 			track_filename = Path(
 				input(f"Enter filename for track {index + 2} ({track}): ")
 			)
+			if not track_filename.name:
+				continue
+
 			new_filename = parent_dir / track_filename.with_suffix(".mp4")
 			if new_filename.exists():
 				if (
