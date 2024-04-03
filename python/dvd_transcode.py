@@ -357,7 +357,12 @@ def process_file(filename: Path, audio_track_encoded_names: list[MP4File], dest_
 
 	for index, track in enumerate(subtitle_track_ids):
 		print(f"Converting subtitles for track {index + 1}...")
-		convert_subtitles(filename, track, finished_encoded_files[index], dest_dir)
+		try:
+			convert_subtitles(filename, track, finished_encoded_files[index], dest_dir)
+		except IndexError:
+			print('WARNING: IndexError on subtitle conversion')
+			print(f'{subtitle_track_ids=}')
+			print(f'{finished_encoded_files=}')
 
 
 def process_directory(directory: Path, dest_dir: Optional[Path] = None):
