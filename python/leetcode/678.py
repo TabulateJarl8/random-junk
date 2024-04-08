@@ -1,11 +1,23 @@
 class Solution:
     def checkValidString(self, s: str) -> bool:
-        count = 0
+        possible_closing_parenthesis = 0
+        possible_opening_parenthesis = 0
+
         for char in s:
             if char == '(':
-                count += 1
+                possible_closing_parenthesis += 1
+                possible_opening_parenthesis += 1
             elif char == ')':
-                count -= 1
+                possible_closing_parenthesis -= 1
+                possible_opening_parenthesis -= 1
+            elif char == '*':
+                possible_closing_parenthesis -= 1
+                possible_opening_parenthesis += 1
 
-        star_count = s.count('*')
-        return any(item == 0 for item in [count, count - star_count, count + star_count])
+            if possible_opening_parenthesis < 0:
+                return False
+            if possible_closing_parenthesis < 0:
+                possible_closing_parenthesis = 0
+
+        return possible_closing_parenthesis == 0
+print(Solution().checkValidString("(((((*(()((((*((**(((()()*)()()()*((((**)())*)*)))))))(())(()))())((*()()(((()((()*(())*(()**)()(())"))
