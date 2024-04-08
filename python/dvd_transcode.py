@@ -1,3 +1,4 @@
+import argparse
 from dataclasses import dataclass
 import os
 import shutil
@@ -6,6 +7,8 @@ from pathlib import Path
 import subprocess
 import json
 import tempfile
+import readline  # noqa: F401
+from typing import Optional, Union
 
 
 @dataclass
@@ -13,8 +16,12 @@ class MP4File:
 	filename: Path
 	track_number: int
 
-	def __init__(self, filename: str, track_number: int):
-		self.filename = Path(filename)
+	def __init__(self, filename: Union[str, Path], track_number: int):
+		if isinstance(filename, str):
+			self.filename = Path(filename)
+		else:
+			self.filename = filename
+
 		self.track_number = track_number
 
 
@@ -93,16 +100,34 @@ def extract_subtitle_tracks(filename: Path) -> list[int]:
 	]
 
 
-def convert_subtitles(filename: Path, track_number: str):
+def convert_subtitles(
+	filename: Path,
+	track_number: Union[str, int],
+	output_filename: Optional[Path] = None,
+	dest_dir: Optional[Path] = None,
+):
 	"""Convert subtitles into srt file with OCR.
 
 	Args:
 		filename (Path): the filename of the MKV file
-		track_number (str): the track number of the English subtitles
+		track_number (Union[str, int]): the track number of the English subtitles
+		output_filename (Path): filename to use as an override (dont include .eng.srt)
+		dest_dir (Path, Optional): the optional destination directory to output to
 	"""
+	track_number = str(track_number)
+
 	# Define the output SRT filename
 	# should be `original_stem.eng.srt`
-	srt_filename = filename.with_suffix(".eng.srt").resolve()
+	if output_filename is None:
+		srt_filename = filename.with_suffix(".eng.srt").resolve()
+	else:
+		srt_filename = output_filename.with_suffix(".eng.srt").resolve()
+
+	if dest_dir is not None and dest_dir.exists():
+		srt_filename = dest_dir / srt_filename.name
+	elif dest_dir is not None and not dest_dir.exists():
+		print('ERROR: destination directory `{dest_dir}` does not exist. Exiting...')
+		sys.exit(1)
 
 	# Use a temporary directory to work with subtitle files
 	with tempfile.TemporaryDirectory() as tempd:
@@ -147,15 +172,20 @@ def convert_subtitles(filename: Path, track_number: str):
 		f.truncate()
 
 
-def transcode_to_mp4_files(filename: Path, audio_track_files: list[MP4File]):
+def transcode_to_mp4_files(
+	filename: Path, audio_track_files: list[MP4File],
+	dest_dir: Optional[Path] = None,
+) -> list[Path]:
 	"""Transcode an MKV into an MP4, creating a new MP4 for each specified audio track.
 
 	Args:
 		filename (Path): the path to the file
 		audio_track_files (list[MP4File]): The MP4 filenames and their respective track IDs
+		dest_dir (Path, Optional): the optional destination directory to output to
+
+	Returns:
+		list[Path]: a list of the files that were outputted
 	"""
-
-
 	with tempfile.TemporaryDirectory() as tempd:
 		mp4_filename = Path(tempd) / filename.with_suffix(".mp4").name
 
@@ -177,9 +207,18 @@ def transcode_to_mp4_files(filename: Path, audio_track_files: list[MP4File]):
 			]
 		).check_returncode()
 
+		output_files = []
+
 		for track in audio_track_files:
 			track_filename = track.filename.name
 			track_id = track.track_number
+
+			output_path = filename.parent / track_filename
+			if dest_dir is not None and dest_dir.exists():
+				output_path = dest_dir / track_filename
+			elif dest_dir is not None and not dest_dir.exists():
+				print('ERROR: destination directory `{dest_dir}` does not exist. Exiting...')
+				sys.exit(1)
 
 			subprocess.run(
 				[
@@ -194,9 +233,13 @@ def transcode_to_mp4_files(filename: Path, audio_track_files: list[MP4File]):
 					"copy",
 					"-c:a",
 					"copy",
-					filename.parent / track_filename,
+					output_path,
 				]
 			).check_returncode()
+
+			output_files.append(output_path)
+
+		return output_files
 
 
 def get_audio_track_names(filename: Path) -> list[str]:
@@ -233,24 +276,159 @@ def get_audio_track_names(filename: Path) -> list[str]:
 	]
 
 
+def prompt_audio_track_names(filename: Path) -> list[MP4File]:
+	"""Prompt the user to name each audio track in a file
+
+	Args:
+		filename (Path): the path to the file
+
+	Returns:
+		list[MP4File]: the list of filenames and tracks
+	"""
+	# First, we must process the audio tracks
+	# prompt the user to name each one
+	audio_tracks = get_audio_track_names(filename)
+
+	assert len(audio_tracks) > 0
+
+	parent_dir = filename.resolve().parent
+
+	audio_track_encoded_names = [
+		MP4File(filename=filename.with_suffix(".mp4"), track_number=0)
+	]
+
+	if audio_track_encoded_names[0].filename.exists():
+		if (
+			input(
+				f"File `{audio_track_encoded_names[0].filename}` already exists. Would you like to remove it? [y/N] "
+			).lower()
+			== "y"
+		):
+			audio_track_encoded_names[0].filename.unlink()
+		else:
+			print("Exiting...")
+			sys.exit(1)
+
+	print(
+		f"Filename for track 1 automatically set: `{audio_track_encoded_names[0].filename.name}`"
+	)
+
+	if len(audio_tracks) > 1:
+		for index, track in enumerate(audio_tracks[1:]):
+			track_filename = Path(
+				input(f"Enter filename for track {index + 2} ({track}): ")
+			)
+			if not track_filename.name:
+				continue
+
+			new_filename = parent_dir / track_filename.with_suffix(".mp4")
+			if new_filename.exists():
+				if (
+					input(
+						f"File `{new_filename}` already exists. Would you like to remove it? [y/N] "
+					).lower()
+					== "y"
+				):
+					new_filename.unlink()
+				else:
+					print("Exiting...")
+					sys.exit(1)
+			audio_track_encoded_names.append(MP4File(new_filename, index + 1))
+
+	return audio_track_encoded_names
+
+
+def process_file(filename: Path, audio_track_encoded_names: list[MP4File], dest_dir: Optional[Path] = None):
+	"""Process an MPV file
+
+	Args:
+		filename (Path): the path to the MPV file
+		audio_track_encoded_names (list[MP4File]): the list of filenames for each track in the file
+		dest_dir (Path, Optional): the optional destination directory to output to
+	"""
+
+	# now, we must extract the audio for each file
+	print("Transcoding to MP4...")
+	finished_encoded_files = transcode_to_mp4_files(filename, audio_track_encoded_names, dest_dir)
+
+	# now, we should extract the subtitles and convert them to SRT files
+	print("Extracting subtitle tracks...")
+	subtitle_track_ids = extract_subtitle_tracks(filename)
+
+	for index, track in enumerate(subtitle_track_ids):
+		print(f"Converting subtitles for track {index + 1}...")
+		try:
+			convert_subtitles(filename, track, finished_encoded_files[index], dest_dir)
+		except IndexError:
+			print('WARNING: IndexError on subtitle conversion')
+			print(f'{subtitle_track_ids=}')
+			print(f'{finished_encoded_files=}')
+
+
+def process_directory(directory: Path, dest_dir: Optional[Path] = None):
+	"""Process an entire directory of MPV files.
+
+	Args:
+		directory (Path): the path to the directory
+		dest_dir (Path, Optional): the optional destination directory to output to
+	"""
+	if not directory.exists():
+		print(f"Directory `{directory.resolve()}` does not exist. Exiting...")
+		sys.exit(1)
+
+	all_files = [prompt_audio_track_names(filename) for filename in directory.glob('*.mkv')]
+
+	for index, file in enumerate(directory.glob('*.mkv')):
+		process_file(file, all_files[index], dest_dir)
+
+
+def file_type(path):
+	if Path(path).exists():
+		return Path(path)
+	else:
+		raise argparse.ArgumentTypeError(f"{path} is not a valid path")
+
+
+def parse_arguments():
+	parser = argparse.ArgumentParser(
+		description="Reencode DVDs",
+		formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+	)
+	parser.add_argument(
+		"file_path", type=file_type, help="The path to a file or directory"
+	)
+	parser.add_argument('--dest-dir', dest='dest_dir', type=file_type, help='The destination directory to write to')
+	parser.add_argument('--captions', dest='captions', action='store_true', help='Only generate captions for the specified file')
+	parser.add_argument('--captions-index', dest='captions_index', default=0, help='The index of the captions to generate. Skips non-english tracks')
+	parser.add_argument('--captions-filename', dest='captions_filename', type=lambda x: Path(x), help='Optional output filename for the captions file')
+	return parser.parse_args()
+
+
 def main():
 	check_dependencies()
+	args = parse_arguments()
+	mkv_path: Path = args.file_path
+
+	if args.captions:
+		if mkv_path.is_dir():
+			for file in mkv_path.glob('*.mkv'):
+				try:
+					subtitle_id = extract_subtitle_tracks(file)[int(args.captions_index)]
+					convert_subtitles(file, subtitle_id, args.captions_filename, args.dest_dir)
+				except IndexError:
+					pass
+			sys.exit(0)
+		else:
+			subtitle_id = extract_subtitle_tracks(mkv_path)[int(args.captions_index)]
+			convert_subtitles(mkv_path, subtitle_id, args.captions_filename, args.dest_dir)
+			sys.exit(0)
+
+	if mkv_path.is_dir():
+		process_directory(mkv_path, args.dest_dir)
+	else:
+		audio_tracks = prompt_audio_track_names(mkv_path)
+		process_file(mkv_path, audio_tracks, args.dest_dir)
 
 
 if __name__ == "__main__":
 	main()
-	mkv_path = Path(
-		"/run/media/tabulate/largeDisk/jellyfin/rips/office_rip/OFFICE/s1e1.mkv"
-	)
-	# print(
-	# 	extract_subtitle_tracks(
-	# 		mkv_path
-	# 	)
-	# )
-	# convert_subtitles(
-	# 	mkv_path,
-	# 	"4",
-	# )
-
-	print(transcode_to_mp4_files(mkv_path, [MP4File('test_norm.mp4', 0), MP4File('test_comm_1.mp4', 1), MP4File('test_comm_2.mp4', 2)]))
-	# transcode_to_mp4_files(mkv_path)
