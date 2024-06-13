@@ -5,11 +5,11 @@
 ## Capslock was remapped to shift using QMK so that it can't be toggled
 
 # global capslock state variable
-capslock_state=$(cat /sys/class/leds/input26::capslock/brightness)
+capslock_state=$(cat /sys/class/leds/input16::capslock/brightness)
 
 cleanup() {
     rv=$?
-    echo 0 | sudo /usr/bin/tee /sys/class/leds/input26::capslock/brightness
+    echo 0 | sudo /usr/bin/tee /sys/class/leds/input16::capslock/brightness
     exit $rv
 }
 
@@ -27,11 +27,11 @@ update_capslock_led() {
     local force_update="$3"
 
     # these tee commands only with with a special /etc/sudoers entry allowing for NOPASSWD
-    if [[ "$muted" == "no" && ("$capslock_state" == "1" || "$force_update" == "1") ]]; then
-        echo 0 | sudo /usr/bin/tee /sys/class/leds/input26::capslock/brightness &>/dev/null
+    if [[ "$muted" == "yes" && ("$capslock_state" == "1" || "$force_update" == "1") ]]; then
+        echo 0 | sudo /usr/bin/tee /sys/class/leds/input16::capslock/brightness &>/dev/null
        capslock_state=0
-    elif [[ "$muted" == "yes" && ("$capslock_state" == "0" || "$force_update" == "1") ]]; then
-        echo 1 | sudo /usr/bin/tee /sys/class/leds/input26::capslock/brightness &>/dev/null
+    elif [[ "$muted" == "no" && ("$capslock_state" == "0" || "$force_update" == "1") ]]; then
+        echo 1 | sudo /usr/bin/tee /sys/class/leds/input16::capslock/brightness &>/dev/null
         capslock_state=1
     fi
 }
