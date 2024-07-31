@@ -30,6 +30,7 @@ update_capslock_led() {
     local force_update="$3" # Flag to force LED update
 
     # Use sudo tee to change the brightness of the capslock LED, requires NOPASSWD entry in /etc/sudoers
+    ## ALL ALL = (ALL) NOPASSWD: /usr/bin/tee /sys/class/leds/input16\:\:capslock/brightness
     if [[ "$muted" == "yes" && ("$capslock_state" == "1" || "$force_update" == "1") ]]; then
         echo 0 | sudo /usr/bin/tee /sys/class/leds/input16::capslock/brightness &>/dev/null # Turn off LED if muted
         capslock_state=0 # Update capslock state
