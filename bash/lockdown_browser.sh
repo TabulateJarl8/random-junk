@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+#######################################################################
+# DISCLAIMER: I have no idea if this is detectable by the educational
+# institution which is requiring the use of lockdown browser, so weigh
+# the pros and cons of just using Windows on a burner laptop/dual boot,
+# as they may try to claim that you are cheating by using it this way
+#######################################################################
+
 function show_help() {
     echo "Usage: ./$(basename $0) -l <lb_path> -w <wine_prefix>"
     echo "    -h: Show this message and exit"
