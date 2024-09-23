@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-show_help() {
+function show_help() {
     echo "Usage: ./$(basename $0) -l <lb_path> -w <wine_prefix>"
     echo "    -h: Show this message and exit"
     echo "    -l: Lockdown Browser installer path"
@@ -8,21 +8,40 @@ show_help() {
     exit 0
 }
 
+function is_valid_dimension() {
+    [[ $1 =~ ^[0-9]+$ ]] && [ "$1" -gt 0 ]
+}
+
+CYAN="\e[36m"
+RED="\e[31m"
+GREEN="\e[32m"
+RESET="\e[0m"
+
+# support NO_COLOR
+if [ ! -z ${NO_COLOR+x} ]; then
+    # NO_COLOR is set
+    CYAN=""
+    RED=""
+    GREEN=""
+    RESET=""
+fi
+
 unset -v LB_PATH
 unset -v WINE_PREFIX
 
 while getopts l:w:h opt; do
     case $opt in
-        l) LB_PATH=$OPTARG ;;
-        w) WINE_PREFIX=$OPTARG ;;
-        h) show_help ;;
-        *)
-            echo "Error in command line parsing" >&2
-            exit 1
+    l) LB_PATH=$OPTARG ;;
+    w) WINE_PREFIX=$OPTARG ;;
+    h) show_help ;;
+    *)
+        echo -e "${RED}Error in command line parsing${RESET}" >&2
+        exit 1
+        ;;
     esac
 done
 
-shift "$(( OPTIND - 1 ))"
+shift "$((OPTIND - 1))"
 
 # validate arguments
 if [ -z "$LB_PATH" ]; then
@@ -31,7 +50,7 @@ if [ -z "$LB_PATH" ]; then
 fi
 
 if [ ! -f "$LB_PATH" ]; then
-    echo "$LB_PATH is not a file" >&2
+    echo -e "${RED}ERROR:${RESET} $LB_PATH is not a file" >&2
     exit 1
 fi
 
@@ -41,28 +60,28 @@ if [ -z "$WINE_PREFIX" ]; then
 fi
 
 if [ ! -d "$WINE_PREFIX" ]; then
-    echo "$WINE_PREFIX is not a directory" >&2
+    echo -e "${RED}ERROR:${RESET} $WINE_PREFIX is not a directory" >&2
     exit 1
 fi
 
 # check if wine is installed
 if ! command -v wine 2>&1 >/dev/null; then
-    echo "wine is not installed"
+    echo -e "${RED}ERROR:${RESET} wine is not installed"
     exit 1
 fi
 
 # check if curl is installed
 if ! command -v curl 2>&1 >/dev/null; then
-    echo "curl is not installed"
+    echo -e "${RED}ERROR:${RESET} curl is not installed"
     exit 1
 fi
 
 # check for gnutls and gnutls 32 bit if on arch
 if command -v pacman 2>&1 >/dev/null; then
-    if ! pacman -Qi lib32-gnutls gnutls > /dev/null; then
-        echo "gnutls or lib32-gnutls are not installed. Please install them with the following command:"
+    if ! pacman -Qi lib32-gnutls gnutls >/dev/null; then
+        echo -e "${RED}ERROR:${RESET} gnutls or lib32-gnutls are not installed. Please install them with the following command:"
         echo
-        echo "    sudo pacman -Sy gnutls lib32-gnutls --needed"
+        echo -e "    ${CYAN}sudo pacman -Sy gnutls lib32-gnutls --needed${RESET}"
         exit 1
     fi
 else
@@ -86,7 +105,7 @@ WINETRICKS_PATH="$TEMP_WORK_DIR/winetricks"
 # download latest version of winetricks
 response=$(curl --write-out '%{http_code}' -L --silent -o "$WINETRICKS_PATH" "https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks")
 if [[ "$response" -ne 200 ]]; then
-    echo "Status code ${response}"
+    echo -e "${RED}ERROR:${RESET} Status code ${response}"
     exit 1
 fi
 chmod +x "$WINETRICKS_PATH"
@@ -96,17 +115,45 @@ export WINEPREFIX=$WINE_PREFIX
 export WINEARCH=win32
 
 # install lockdown browser
-echo "Please follow the lockdown browser installation wizard"
+echo -e "${CYAN}Please follow the lockdown browser installation wizard${RESET}"
 wine $LB_PATH
 
-echo "Installing required libraries..."
+echo -e "${CYAN}Installing required libraries...${RESET}"
 $WINETRICKS_PATH msftedit allfonts vcrun2015 dxvk
 
+echo -e "${CYAN}Enabling wine virtual desktop...${RESET}"
+if ! command -v xrandr 2>&1 >/dev/null; then
+    echo -e "${RED}ERROR:${RESET} Command xrandr not found. Please manually input screen resolution"
+
+    # Prompt for screen width
+    while true; do
+        read -p "Enter screen width: " width
+        if is_valid_dimension "$width"; then
+            break
+        else
+            echo -e "${RED}ERROR:${RESET} Invalid width. Please enter a positive integer."
+        fi
+    done
+
+    # Prompt for screen height
+    while true; do
+        read -p "Enter screen height: " height
+        if is_valid_dimension "$height"; then
+            break
+        else
+            echo -e "${RED}ERROR:${RESET} Invalid height. Please enter a positive integer."
+        fi
+    done
+
+    resolution="${width}x${height}"
+else
+    resolution=$(xrandr --current | grep '*' | uniq | awk '{print $1}')
+fi
+
+$WINETRICKS_PATH vd=$resolution
+
 echo
-echo "Success! Lockdown Browser should be available in your desktop menu."
-echo -e "\e[31mNOTICE:\e[0m"
-echo "Run the follow command, then navigate to 'Graphics' and check 'Emulate a virtual desktop'. Then, input your screen resolution:"
-echo "WINEPREFIX=\"$WINE_PREFIX\" winecfg"
+echo -e "${GREEN}Success! ${CYAN}Lockdown Browser should be available in your desktop menu.${RESET}"
 
 # make sure the temporary directory gets removed on script exit
 trap "exit 1" HUP INT PIPE QUIT TERM
