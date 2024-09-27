@@ -83,6 +83,12 @@ if ! command -v curl 2>&1 >/dev/null; then
     exit 1
 fi
 
+# check if cabextract is installed
+if ! command -v cabextract 2>&1 >/dev/null; then
+    echo -e "${RED}ERROR:${RESET} cabextract is not installed"
+    exit 1
+fi
+
 # check for gnutls and gnutls 32 bit if on arch
 if command -v pacman 2>&1 >/dev/null; then
     if ! pacman -Qi lib32-gnutls gnutls >/dev/null; then
