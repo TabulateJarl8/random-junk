@@ -138,7 +138,7 @@ int remove_max(int *arr, int *items_in_arr);
 int remove_index(int *arr, int pos, int *items_in_arr);
 
 /**
- * @brief The value at pos has been changed, retore the heap property
+ * @brief The value at pos has been changed, restore the heap property
  *
  * @param[in] arr The array
  * @param[in] pos the index of the item to check

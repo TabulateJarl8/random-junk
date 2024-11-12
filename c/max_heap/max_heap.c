@@ -31,8 +31,8 @@ int right_sibling_index(int pos) {
   return pos % 2 != 0 && pos + 1 < ARR_SIZE && in_bounds(pos) ? pos + 1 : -1;
 }
 
-bool is_leaf(int pos, size_t next_index) {
-  return (int)next_index / 2 <= pos && pos < next_index;
+bool is_leaf(int pos, size_t items_in_array) {
+  return (int)items_in_array / 2 <= pos && pos < items_in_array;
 }
 
 void modify(int *arr, int pos, int new_val, int items_in_arr) {
