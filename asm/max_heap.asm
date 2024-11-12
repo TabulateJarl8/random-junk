@@ -3,8 +3,8 @@ bits 64
 section .data
     array times 12 dd 0
     ARRAY_SIZE equ 12
-    ARRAY_ITEM_SIZE equ 4 ; 4-byte ints (dd)
-    array_current_items equ 0
+    ARRAY_ITEM_SIZE equ 1 ; 4-byte ints (dd)
+    array_current_items dq 0
 
 section .text
     global _start
@@ -36,6 +36,103 @@ section .text
     pop     rsi     ; restore rsi
     pop     rdi     ; restore rdi
 %endmacro
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Integer printing system ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; Calculate the power of 10 that corresponds to an integer
+; for example, 100 for 543, 1000 for 8956, and 10000 for 15236
+; inputs:
+;       rax : the integer to calculate the 10 power for
+; outputs:
+;       rax : the power of 10
+calculate_ten_power:
+    mov     rcx, rax        ; rcx should be the integer to find the power of 10 for
+
+    mov     rax, 1          ; we need to calculate the power of 10 that corresponds to rcx
+                            ; for example 100 for 543 and 1000 for 8753
+    mov     rbx, 10         ; we're multiplying the value in rax by 10 each time, load into rbx
+    calculate_ten:
+        mul     rbx                 ; rax * rbx (10)
+        cmp     rax, rcx            ; compare rax to our target number
+        jg      finish_power_ten    ; if number is greater than target, divide by 10 and ret
+        jmp     calculate_ten       ; not greater than target, continue multiplying
+
+    finish_power_ten:
+        xor     rdx, rdx    ; clear our rdx (remainder)
+        div     rbx         ; divide rax by 10 to finish the calculation
+                            ; now rax contains the power of 10
+        ret
+
+; Prints a single digit
+; inputs:
+;       rsi : the digit to print
+print_digit:
+    add     rsi, '0'                ; convert digit to ASCII
+    push    rsi                     ; put the digit on the stack
+    mov     rsi, rsp                ; put pointer to stack for *buf
+    mov     rax, 1                  ; write
+    mov     rdi, 1                  ; stdout
+    mov     rdx, 1                  ; len
+    syscall                         ; call kernel
+
+    add     rsp, 8                  ; remove digit from stack
+
+    ret
+
+; Print a multi-digit integer
+; inputs:
+;       rax : the integer to print
+print_integer:
+    ; takes the integer to print in from rax
+    push    rax                 ; push rax it for the next function to consume
+    call    calculate_ten_power ; power of 10 is now in rax
+    mov     rcx, rax            ; save the power of 10 into rcx
+    pop     rax                 ; mov the argument (number to print) that was pushed into rax
+
+    iter_number:
+        ; num_to_print: rax
+        ; base_10_place: rcx
+        ; formula for accessing number: (num_to_print // base_10_place) % 10
+        ; base_10_place is the power of 10 that corresponds to the place of number to print
+        ; using 123 for example, 100 will get the 1, 10 will get the 2, and 1 will get the 3
+
+        push    rax         ; first, make sure we have a copy of rax
+
+        mov     rbx, 10     ; 10 for use in modulo
+
+
+        xor     rdx, rdx    ; clear out rdx (remainder)
+        div     rcx         ; next, floor divide rax by rcx (num_to_print // base_10_place)
+                            ; result is stored in rax, mod 10
+        xor     rdx, rdx    ; clear out rdx because thats where remainder is stored
+        div     rbx         ; divide rax by rbx (rax % 10)
+                            ; rdx now contains our digit to print
+        mov     rsi, rdx    ; move rdx into rsi
+        push    rcx         ; preserve our power of 10
+        call    print_digit ; print the digit we extracted
+        pop     rcx         ; pop the power of 10 from the stack
+
+        mov     rax, 1
+        cmp     rax, rcx            ; check if rcx is equal to 1. if so, we just did the last digit
+        je      exit_print_integer  ; we juts did the last digit, exit printing
+
+        xor     rdx, rdx    ; clear rdx (remainder)
+        mov     rbx, 10     ; put 10 in rbx
+        mov     rax, rcx    ; put our power of 10 in rax
+
+        div     rbx         ; divide power of 10 by 10 to get the next digit
+        mov     rcx, rax    ; move result into rcx
+
+        pop     rax         ; restore our original number to print
+
+        jmp iter_number     ; loop to iter_number until rcx is 1 (we've done the last digit)
+
+    exit_print_integer:
+        pop     rax     ; pop off our original number so that we return to the correct address
+        ret
+
 ; return the index of the parent of an index
 ; inputs:
 ;       rdi : the index to find the parent of
@@ -51,6 +148,7 @@ parent_index:
     ; (int)(rax - 1) / 2
     dec     rax             ; rax--
     mov     rdi, 2          ; rdi = 2
+    xor     rdx, rdx        ; clear rdx since theres no high order bits
     idiv    rdi             ; rax /= rdi (rax / 2)
 
     ; rax now contains the parent index
@@ -101,6 +199,7 @@ left_sibling_index:
     ; check if rdi is even
     mov     rax, rdi        ; rax = rdi
     mov     rsi, 2          ; rsi = 2
+    xor     rdx, rdx        ; clear rdx since theres no high order bits
     idiv    rsi             ; rax /= 2
 
     test    rdx, rdx        ; rdx % 2 == 0
@@ -126,6 +225,7 @@ right_sibling_index:
     ; check if rdi is not even
     mov     rax, rdi        ; rax = rdi
     mov     rsi, 2          ; rsi = 2
+    xor     rdx, rdx        ; clear rdx since theres no high order bits
     idiv    rsi             ; rax /= 2
 
     test    rdx, rdx        ; rdx % 2 != 0
@@ -153,9 +253,11 @@ is_leaf:
     jge     not_leaf    ; return 0
 
     ; not a leaf if rsi / 2 > rdi
-    mov     rdx, 2      ; rdx = 2
-    idiv    rsi         ; rsi /= rdx (rsi /= 2)
-    cmp     rsi, rdi    ; if rsi > rdi
+    mov     rax, rsi    ; rax = rsi
+    mov     rsi, 2      ; rsi = 2
+    xor     rdx, rdx        ; clear rdx since theres no high order bits
+    idiv    rsi         ; rax /= rsi (rax /= 2)
+    cmp     rax, rdi    ; if rax > rdi
     jg      not_leaf    ; return 0
 
     ; all leaf checks have passed, return 1
@@ -396,7 +498,43 @@ return_none:
     mov     rax, -1     ; rax = -1 (child/parent/sibling doesn't exist)
     ret
 
+print_array:
+    push    rbx         ; save rbx
+    xor     rbx, rbx    ; clear rbx
+
+    print_array_loop:
+        cmp     rbx, [array_current_items]
+        je      print_array_end
+
+        mov     rax, [array + rbx * ARRAY_ITEM_SIZE]
+        push    rbx
+        call    print_integer
+        pop     rbx
+
+        cmp     rbx, ARRAY_SIZE - 1
+        je      print_array_end
+
+        ; print space
+        inc     rbx
+        jmp     print_array_loop
+
+    print_array_end:
+        pop     rbx     ; restore rbx
+        ret
+
+
 _start:
+    mov     rdi, array
+    mov     rsi, array_current_items
+    mov     rdx, 1
+    call    insert_into_heap
+
+    mov     rdi, array
+    mov     rsi, array_current_items
+    mov     rdx, 2
+    call    insert_into_heap
+
+    call    print_array
 
     mov     rax, 60     ; exit
     mov     rdi, 0      ; exit code 0

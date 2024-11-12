@@ -1,3 +1,4 @@
+bits 64
 section .data
     server_ready_msg_pt1 db "Bound and listening on http://127.0.0.1:"
     server_ready_msg_pt1_len equ $ - server_ready_msg_pt1
@@ -18,8 +19,24 @@ section .data
     http_200_resp:
         db "HTTP/1.0 200 OK", 0xa
         db "Server: TabulateASM", 0xa
-        db "Content-Type: text/html", 0xa, 0xa
+    ;    db "Content-Type: text/html", 0xa, 0xa
     http_200_resp_len equ $ - http_200_resp
+
+    Extensions:
+        db ".html", 5, 0  ; .html extension, length 5
+        db ".css", 4, 1   ; .css extension, length 4
+
+    ; Define full Content-Type headers as null-terminated strings, with two newlines after each
+    ContentTypes:
+        db "Content-Type: text/html", 0xa, 0xa, 0
+        db "Content-Type: text/css", 0xa, 0xa, 0
+
+    ; Array of offsets pointing to each full header in ContentTypes
+    ;ContentTypeOffsets:
+     ;   dq ContentTypes                ; Offset for "Content-Type: text/html"
+      ;  dq ContentTypes + 25           ; Offset for "Content-Type: text/css"
+
+    NumContentTypes equ 2
 
     http_400_resp:
         db "HTTP/1.0 400 Bad Request", 0xa
@@ -182,6 +199,7 @@ print_first_line:
 ;       rdi : the address of the request header buffer
 ; outputs:
 ;       [path_filename] : a buffer containing the relative path to the requested file
+;       rax :
 parse_filename_from_get:
     cmp     byte [rdi],     'G'         ; check for a GET request
     jne     error_400                   ; not a GET request, throw a 400 error
@@ -198,7 +216,7 @@ parse_filename_from_get:
     xor     rax, rax                    ; set rax to NULL
     rep     stosb                       ; set all bytes to null
 
-    ; set up path filename variable with the directory containing html documents 
+    ; set up path filename variable with the directory containing html documents
     mov     rdi, path_filename          ; destination address
     mov     rsi, web_page_directory     ; source address
     mov     rcx, web_page_directory_len ; size of string to copy
@@ -220,13 +238,13 @@ parse_filename_from_get:
     dec     rcx                         ; dont count the space at the end
 
     ; check if the ending character is a '/' (replace it with index.html)
-    xor     rbx, rbx                    ; add index.html flag
+    xor     rbx, rbx                    ; add index.html flag, setting to 0 means not to append index.html
     cmp     byte [rdi + rcx - 1], '/'   ; check if last char is '/'
     jne     skip_index_html_flag        ; if its not, then we dont need to change the rbx flag
 
     mov     rbx, rcx                    ; set rbx to non-zero (amount of bytes in page name) to trigger addition of index.html
 
-    skip_index_html_flag:  
+    skip_index_html_flag:
     ; write the path from the URL into the path_filename variable
     mov     rsi, rdi                                    ; put our source string into rsi
     mov     rdi, path_filename + web_page_directory_len ; destination address (skips 'pages')
@@ -234,7 +252,7 @@ parse_filename_from_get:
     rep     movsb                                       ; copy the string into the destination
 
     cmp     rbx, 0                                      ; check if we need to append index.html
-    je      skip_append_index_html                      ; we dont need to, skip to the end
+    je      set_content_type_header                     ; we dont need to, skip to the end
 
     ; append index.html
     mov     rsi, default_filename                       ; source address
@@ -244,7 +262,15 @@ parse_filename_from_get:
     mov     rcx, default_filename_len                   ; amount of data to copy
     rep     movsb                                       ; copy string
 
-    skip_append_index_html:
+    set_content_type_header:
+    ; check file extensions
+    mov     rsi, Extensions                             ; load the start of the extensions array
+    mov     rbx, ContentTypes                           ; load the start of the contenttypes array
+
+    extension_check_loop:
+    movzx   rax, byte [rsi + 5]
+
+
     ret
 
 ; create a socket and return it's file descriptor. exits on error
@@ -437,7 +463,7 @@ _start:
 
     connection_loop:
         mov     rax, [original_sock_fd] ; put the socket fd into rax
-        call    sock_accept             ; accept incoming connections 
+        call    sock_accept             ; accept incoming connections
         mov     [accepted_sock_fd], rax ; move new fd into accepted_sock_fd
 
         ; read from socket into client_read_buffer

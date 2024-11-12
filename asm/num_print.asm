@@ -1,3 +1,4 @@
+bits 64
 ; Print "number i" for i in range(5,60)
 section .data
     line_text db "number "
@@ -71,7 +72,7 @@ print_integer:
 
         mov     rbx, 10     ; 10 for use in modulo
 
-        
+
         xor     rdx, rdx    ; clear out rdx (remainder)
         div     rcx         ; next, floor divide rax by rcx (num_to_print // base_10_place)
                             ; result is stored in rax, mod 10
