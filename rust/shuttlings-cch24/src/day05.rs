@@ -16,20 +16,35 @@ struct Order {
 }
 
 async fn manifest(headers: HeaderMap, body: String) -> impl IntoResponse {
-    match headers.get(CONTENT_TYPE) {
-        Some(content_type) => {
-            if content_type != "application/toml" {
-                return (StatusCode::BAD_REQUEST, "expected TOML data".to_string());
-            }
+    // accept toml, yaml, or json manifests
+    let body_string = match headers.get(CONTENT_TYPE).map(|x| x.as_bytes()) {
+        Some(b"application/toml") => body,
+        Some(b"application/json") => {
+            let mut toml = String::new();
+
+            let mut deserializer = serde_json::Deserializer::from_str(&body);
+            let serializer = toml::ser::Serializer::pretty(&mut toml);
+            serde_transcode::transcode(&mut deserializer, serializer).unwrap();
+            toml
         }
-        None => return (StatusCode::BAD_REQUEST, "expected TOML data".to_string()),
+        Some(b"application/yaml") => {
+            let mut toml = String::new();
+
+            let deserializer = serde_yaml::Deserializer::from_str(&body);
+            let serializer = toml::ser::Serializer::pretty(&mut toml);
+            serde_transcode::transcode(deserializer, serializer).unwrap();
+            toml
+        }
+        _ => return (StatusCode::UNSUPPORTED_MEDIA_TYPE, "".to_string()),
     };
 
-    let manifest = match Manifest::from_str(&body) {
+    // check for valid toml manifest
+    let manifest = match Manifest::from_str(&body_string) {
         Ok(v) => v,
         Err(_) => return (StatusCode::BAD_REQUEST, "Invalid manifest".to_string()),
     };
 
+    // check that keywords are present in package
     let keywords = match manifest.package.clone().and_then(|p| p.keywords) {
         Some(k) => k.as_local().unwrap(),
         None => {
@@ -40,6 +55,7 @@ async fn manifest(headers: HeaderMap, body: String) -> impl IntoResponse {
         }
     };
 
+    // check that keywords contain the magic keyword
     if !keywords.contains(&"Christmas 2024".to_string()) {
         return (
             StatusCode::BAD_REQUEST,
