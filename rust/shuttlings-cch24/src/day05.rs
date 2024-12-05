@@ -1,26 +1,13 @@
+use std::str::FromStr;
+
 use axum::{
     http::{header::CONTENT_TYPE, HeaderMap, StatusCode},
     response::IntoResponse,
     routing::post,
     Router,
 };
+use cargo_manifest::Manifest;
 use serde::Deserialize;
-use toml::Value;
-
-#[derive(Deserialize, Debug)]
-struct Config {
-    package: Package,
-}
-
-#[derive(Deserialize, Debug)]
-struct Package {
-    metadata: Metadata,
-}
-
-#[derive(Deserialize, Debug)]
-struct Metadata {
-    orders: Vec<Value>,
-}
 
 #[derive(Deserialize, Debug)]
 struct Order {
@@ -38,16 +25,24 @@ async fn manifest(headers: HeaderMap, body: String) -> impl IntoResponse {
         None => return (StatusCode::BAD_REQUEST, "expected TOML data".to_string()),
     };
 
+    let metadata = match Manifest::from_str(&body) {
+        Ok(v) => match v.package.and_then(|p| p.metadata) {
+            Some(m) => m,
+            None => return (StatusCode::BAD_REQUEST, "Invalid manifest".to_string()),
+        },
+        Err(_) => return (StatusCode::BAD_REQUEST, "Invalid manifest".to_string()),
+    };
+
     // filter order data to only include valid orders
-    let order_data = match toml::from_str::<Config>(&body) {
-        Ok(v) => v
-            .package
-            .metadata
-            .orders
-            .into_iter()
-            .filter_map(|o| o.try_into::<Order>().ok())
+    let order_data: Vec<Order> = match metadata.get("orders") {
+        Some(v) => v
+            .as_array()
+            .unwrap()
+            .iter()
+            .cloned()
+            .filter_map(|o| o.try_into().ok())
             .collect(),
-        Err(_) => Vec::new(),
+        None => Vec::new(),
     };
 
     if order_data.is_empty() {
