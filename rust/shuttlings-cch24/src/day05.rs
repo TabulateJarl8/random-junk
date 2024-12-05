@@ -12,7 +12,7 @@ use serde::Deserialize;
 #[derive(Deserialize, Debug)]
 struct Order {
     item: String,
-    quantity: u16,
+    quantity: u32,
 }
 
 async fn manifest(headers: HeaderMap, body: String) -> impl IntoResponse {
@@ -25,23 +25,42 @@ async fn manifest(headers: HeaderMap, body: String) -> impl IntoResponse {
         None => return (StatusCode::BAD_REQUEST, "expected TOML data".to_string()),
     };
 
-    let metadata = match Manifest::from_str(&body) {
-        Ok(v) => match v.package.and_then(|p| p.metadata) {
-            Some(m) => m,
-            None => return (StatusCode::BAD_REQUEST, "Invalid manifest".to_string()),
-        },
+    let manifest = match Manifest::from_str(&body) {
+        Ok(v) => v,
         Err(_) => return (StatusCode::BAD_REQUEST, "Invalid manifest".to_string()),
     };
 
+    let keywords = match manifest.package.clone().and_then(|p| p.keywords) {
+        Some(k) => k.as_local().unwrap(),
+        None => {
+            return (
+                StatusCode::BAD_REQUEST,
+                "Magic keyword not provided".to_string(),
+            )
+        }
+    };
+
+    if !keywords.contains(&"Christmas 2024".to_string()) {
+        return (
+            StatusCode::BAD_REQUEST,
+            "Magic keyword not provided".to_string(),
+        );
+    }
+
+    let metadata = manifest.package.and_then(|p| p.metadata);
+
     // filter order data to only include valid orders
-    let order_data: Vec<Order> = match metadata.get("orders") {
-        Some(v) => v
-            .as_array()
-            .unwrap()
-            .iter()
-            .cloned()
-            .filter_map(|o| o.try_into().ok())
-            .collect(),
+    let order_data: Vec<Order> = match metadata {
+        Some(m) => match m.get("orders") {
+            Some(v) => v
+                .as_array()
+                .unwrap()
+                .iter()
+                .cloned()
+                .filter_map(|o| o.try_into().ok())
+                .collect(),
+            None => Vec::new(),
+        },
         None => Vec::new(),
     };
 
@@ -59,7 +78,7 @@ async fn manifest(headers: HeaderMap, body: String) -> impl IntoResponse {
         response.push_str(&format!("{}: {}\n", order.item, order.quantity));
     });
 
-    (StatusCode::OK, response)
+    (StatusCode::OK, response.trim_end().to_string())
 }
 
 pub fn get_routes() -> Router {
