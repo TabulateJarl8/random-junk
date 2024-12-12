@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 axum = { version = "0.7.4", features = ["query"] }
 cargo-manifest = "0.17.0"
+leaky-bucket = "1.1.2"
 serde = { version = "1.0.215", features = ["derive"] }
 serde-transcode = "1.1.1"
 serde_json = "1.0.133"
