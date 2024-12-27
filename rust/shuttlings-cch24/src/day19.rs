@@ -1,11 +1,18 @@
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
+
 use axum::{
-    extract::{self, Path, State},
+    extract::{self, Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::{delete, get, post, put},
-    Router,
+    Json, Router,
 };
+use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use sqlx::{
     prelude::FromRow,
     types::{
@@ -32,11 +39,20 @@ struct Quote {
 #[derive(Debug, Clone)]
 struct AppState {
     pool: sqlx::PgPool,
+    token_map: Arc<Mutex<HashMap<String, i32>>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Pagination {
+    token: String,
 }
 
 impl AppState {
     fn new(pool: sqlx::PgPool) -> Self {
-        AppState { pool }
+        AppState {
+            pool,
+            token_map: Arc::new(Mutex::new(HashMap::new())),
+        }
     }
 }
 
@@ -47,6 +63,7 @@ async fn clear_quotes_table(State(state): extract::State<AppState>) -> impl Into
         .unwrap();
 }
 
+/// return a quote from the table
 async fn fetch_quote(id: Uuid, pool: &sqlx::PgPool) -> Result<Quote, sqlx::Error> {
     sqlx::query_as::<_, Quote>("SELECT * FROM quotes WHERE id = $1")
         .bind(id)
@@ -129,6 +146,60 @@ async fn create_quote(
     }
 }
 
+async fn list_quotes(
+    State(state): State<AppState>,
+    pagination: Option<Query<Pagination>>,
+) -> Response {
+    // get page number, or 1 if not specified
+    let page = if let Some(query) = pagination {
+        let locked_map = state.token_map.lock().unwrap();
+        match locked_map.get(&query.token) {
+            Some(&v) => v,
+            None => return StatusCode::BAD_REQUEST.into_response(),
+        }
+    } else {
+        1
+    };
+
+    let offset = (page - 1) * 3;
+
+    // get number of rows for page calculation
+    let row_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM quotes")
+        .fetch_one(&state.pool)
+        .await
+        .unwrap();
+
+    // fetch 3 rows from "page" to return
+    match sqlx::query_as::<_, Quote>(
+        "SELECT * FROM quotes ORDER BY created_at OFFSET $1 FETCH FIRST 3 ROWS ONLY",
+    )
+    .bind(offset)
+    .fetch_all(&state.pool)
+    .await
+    {
+        Ok(v) => {
+            if i64::from(offset + 3) >= row_count {
+                // no more pages after this
+                Json(json!({"quotes": v, "page": page, "next_token": null})).into_response()
+            } else {
+                // generate random token for next page
+                let next_token: String = rand::thread_rng()
+                    .sample_iter(&Alphanumeric)
+                    .take(16)
+                    .map(char::from)
+                    .collect();
+
+                // insert token into hashmap
+                let mut locked_map = state.token_map.lock().unwrap();
+                locked_map.insert(next_token.clone(), page + 1);
+
+                Json(json!({"quotes": v, "page": page, "next_token": next_token})).into_response()
+            }
+        }
+        Err(_) => StatusCode::BAD_REQUEST.into_response(),
+    }
+}
+
 pub fn get_routes(pool: sqlx::PgPool) -> Router {
     let state = AppState::new(pool);
 
@@ -138,5 +209,6 @@ pub fn get_routes(pool: sqlx::PgPool) -> Router {
         .route("/19/remove/:id", delete(remove_quote))
         .route("/19/undo/:id", put(undo_quote))
         .route("/19/draft", post(create_quote))
+        .route("/19/list", get(list_quotes))
         .with_state(state)
 }
