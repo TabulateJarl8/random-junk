@@ -9,10 +9,10 @@ use axum::{
 };
 use toml::Table;
 
-const SUPPORTED_COLORS: [&'static str; 3] = ["red", "blue", "purple"];
+const SUPPORTED_COLORS: [&str; 3] = ["red", "blue", "purple"];
 
 async fn get_star() -> impl IntoResponse {
-    return "<div id=\"star\" class=\"lit\"></div>";
+    "<div id=\"star\" class=\"lit\"></div>"
 }
 
 async fn get_present_color(Path(color): Path<String>) -> Response {
@@ -24,7 +24,7 @@ async fn get_present_color(Path(color): Path<String>) -> Response {
 
     let next_color_index = (color_index + 1) % SUPPORTED_COLORS.len();
 
-    return format!(
+    format!(
         r###"
     <div class="present {}" hx-get="/23/present/{}" hx-swap="outerHTML">
                     <div class="ribbon"></div>
@@ -35,7 +35,7 @@ async fn get_present_color(Path(color): Path<String>) -> Response {
     "###,
         SUPPORTED_COLORS[color_index], SUPPORTED_COLORS[next_color_index]
     )
-    .into_response();
+    .into_response()
 }
 
 async fn get_ornament(Path((state, id)): Path<(String, String)>) -> Response {
@@ -49,12 +49,12 @@ async fn get_ornament(Path((state, id)): Path<(String, String)>) -> Response {
         _ => return StatusCode::IM_A_TEAPOT.into_response(),
     };
 
-    return format!(
+    format!(
         r#"<div class="ornament{state_class}" id="ornament{id}" hx-trigger="load delay:2s once" hx-get="/23/ornament/{next_state}/{id}" hx-swap="outerHTML"></div>"#,
         id = sanitized_id,
         state_class = state_class,
         next_state = next_state
-    ).into_response();
+    ).into_response()
 }
 
 async fn upload_lockfile(mut multipart: Multipart) -> Response {
@@ -75,8 +75,8 @@ async fn upload_lockfile(mut multipart: Multipart) -> Response {
     };
 
     let package_arr = match lockfile.get("package") {
-        Some(&ref v) => match v.as_array() {
-            Some(&ref a) => a,
+        Some(v) => match v.as_array() {
+            Some(a) => a,
             None => return StatusCode::BAD_REQUEST.into_response(),
         },
         None => return StatusCode::BAD_REQUEST.into_response(),
@@ -84,7 +84,7 @@ async fn upload_lockfile(mut multipart: Multipart) -> Response {
 
     for dependency in package_arr {
         let checksum = match dependency.get("checksum") {
-            Some(&ref v) => match v.as_str() {
+            Some(v) => match v.as_str() {
                 Some(s) => s,
                 None => return StatusCode::BAD_REQUEST.into_response(),
             },
@@ -127,7 +127,7 @@ async fn upload_lockfile(mut multipart: Multipart) -> Response {
             ));
     }
 
-    return sprinkles.into_response();
+    sprinkles.into_response()
 }
 
 pub fn get_routes() -> Router {
