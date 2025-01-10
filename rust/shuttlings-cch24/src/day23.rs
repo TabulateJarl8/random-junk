@@ -133,7 +133,7 @@ async fn upload_lockfile(mut multipart: Multipart) -> Response {
 pub fn get_routes() -> Router {
     Router::new()
         .route("/23/star", get(get_star))
-        .route("/23/present/:color", get(get_present_color))
-        .route("/23/ornament/:state/:n", get(get_ornament))
+        .route("/23/present/{color}", get(get_present_color))
+        .route("/23/ornament/{state}/{n}", get(get_ornament))
         .route("/23/lockfile", post(upload_lockfile))
 }

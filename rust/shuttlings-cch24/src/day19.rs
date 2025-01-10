@@ -44,7 +44,7 @@ struct AppState {
 
 #[derive(Debug, Deserialize)]
 struct Pagination {
-    token: String,
+    token: Option<String>,
 }
 
 impl AppState {
@@ -146,14 +146,11 @@ async fn create_quote(
     }
 }
 
-async fn list_quotes(
-    State(state): State<AppState>,
-    pagination: Option<Query<Pagination>>,
-) -> Response {
+async fn list_quotes(State(state): State<AppState>, pagination: Query<Pagination>) -> Response {
     // get page number, or 1 if not specified
-    let page = if let Some(query) = pagination {
+    let page = if let Some(token) = pagination.0.token {
         let locked_map = state.token_map.lock().unwrap();
-        match locked_map.get(&query.token) {
+        match locked_map.get(&token) {
             Some(&v) => v,
             None => return StatusCode::BAD_REQUEST.into_response(),
         }
@@ -205,9 +202,9 @@ pub fn get_routes(pool: sqlx::PgPool) -> Router {
 
     Router::new()
         .route("/19/reset", post(clear_quotes_table))
-        .route("/19/cite/:id", get(get_quote))
-        .route("/19/remove/:id", delete(remove_quote))
-        .route("/19/undo/:id", put(undo_quote))
+        .route("/19/cite/{id}", get(get_quote))
+        .route("/19/remove/{id}", delete(remove_quote))
+        .route("/19/undo/{id}", put(undo_quote))
         .route("/19/draft", post(create_quote))
         .route("/19/list", get(list_quotes))
         .with_state(state)
