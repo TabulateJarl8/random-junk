@@ -1,3 +1,4 @@
+bits 64
 section .data
     server_ready_msg_pt1 db "Bound and listening on http://127.0.0.1:"
     server_ready_msg_pt1_len equ $ - server_ready_msg_pt1
@@ -198,7 +199,7 @@ parse_filename_from_get:
     xor     rax, rax                    ; set rax to NULL
     rep     stosb                       ; set all bytes to null
 
-    ; set up path filename variable with the directory containing html documents 
+    ; set up path filename variable with the directory containing html documents
     mov     rdi, path_filename          ; destination address
     mov     rsi, web_page_directory     ; source address
     mov     rcx, web_page_directory_len ; size of string to copy
@@ -226,7 +227,7 @@ parse_filename_from_get:
 
     mov     rbx, rcx                    ; set rbx to non-zero (amount of bytes in page name) to trigger addition of index.html
 
-    skip_index_html_flag:  
+    skip_index_html_flag:
     ; write the path from the URL into the path_filename variable
     mov     rsi, rdi                                    ; put our source string into rsi
     mov     rdi, path_filename + web_page_directory_len ; destination address (skips 'pages')
@@ -437,7 +438,7 @@ _start:
 
     connection_loop:
         mov     rax, [original_sock_fd] ; put the socket fd into rax
-        call    sock_accept             ; accept incoming connections 
+        call    sock_accept             ; accept incoming connections
         mov     [accepted_sock_fd], rax ; move new fd into accepted_sock_fd
 
         ; read from socket into client_read_buffer
