@@ -88,6 +88,9 @@ section .data
     DEFINE_EXTENSION ttf, "font/ttf"
     DEFINE_EXTENSION svg, "image/svg+xml"
 
+    content_type_octet_stream         db "Content-Type: application/octet-stream", 0xa, 0xa
+    content_type_octet_stream_len     equ $ - content_type_octet_stream
+
     ; ERROR RESPONSE DEFINITIONS
     http_400_resp:
         db "HTTP/1.0 400 Bad Request", 0xa
@@ -395,9 +398,9 @@ write_content_type_header:
     DEFINE_CONTENT_TYPE_HANDLER woff2
 
     write_content_type_header_loop_not_found:
-        ; file extension not found, just use text/html
-        mov     rsi, content_type_html      ; text/html content type
-        mov     rdx, content_type_html_len  ; text/html content type length
+        ; file extension not found, just use application/octet-stream
+        mov     rsi, content_type_octet_stream      ; application/octet-stream content type
+        mov     rdx, content_type_octet_stream_len  ; application/octet-stream content type length
 
     write_content_type_to_sock:
         mov     rax, [accepted_sock_fd]     ; socket fd
