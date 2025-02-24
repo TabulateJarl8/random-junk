@@ -1,4 +1,5 @@
 bits 64
+
 section .data
     server_ready_msg_pt1 db "Bound and listening on http://127.0.0.1:"
     server_ready_msg_pt1_len equ $ - server_ready_msg_pt1
@@ -19,9 +20,23 @@ section .data
     http_200_resp:
         db "HTTP/1.0 200 OK", 0xa
         db "Server: TabulateASM", 0xa
-        db "Content-Type: text/html", 0xa, 0xa
     http_200_resp_len equ $ - http_200_resp
 
+    ; CONTENT TYPE DEFINITIONS
+    content_type_html       db "Content-Type: text/html", 0xa, 0xa
+    content_type_html_len   equ $ - content_type_html
+
+    content_type_css        db "Content-Type: text/css", 0xa, 0xa
+    content_type_css_len    equ $ - content_type_css
+
+    content_type_ico        db "Content-Type: image/x-icon", 0xa, 0xa
+    content_type_ico_len    equ $ - content_type_ico
+
+    file_extension_html     db "html", 0
+    file_extension_css      db "css", 0
+    file_extension_ico      db "ico", 0
+
+    ; ERROR RESPONSE DEFINITIONS
     http_400_resp:
         db "HTTP/1.0 400 Bad Request", 0xa
         db "Server: TabulateASM", 0xa
@@ -58,7 +73,7 @@ section .data
 
     max_filesize equ 255
 
-    path_filename_len equ max_filesize + web_page_directory_len
+    path_filename_max_len equ max_filesize + web_page_directory_len
 
 section .bss
     client_read_buffer resb BUFFER_READ_SIZE
@@ -195,7 +210,7 @@ parse_filename_from_get:
 
     ; clear the previous filename buffer
     mov     rdi, path_filename          ; destination address
-    mov     rcx, path_filename_len      ; number of bytes to overwrite
+    mov     rcx, path_filename_max_len  ; number of bytes to overwrite
     xor     rax, rax                    ; set rax to NULL
     rep     stosb                       ; set all bytes to null
 
@@ -263,6 +278,115 @@ create_socket:
     js      exit        ; jump to exit if sign flag is present
 
     ret
+
+; implementation of strlen
+; inputs:
+;       rdi : address of buffer
+; outputs:
+;       rax : length of the string, not including the null byte
+strlen:
+    xor     rax, rax                    ; clear count register
+    strlen_inc:
+        movzx   rcx, byte [rdi + rax]   ; get the byte at *(buffer + rax)
+        test    rcx, rcx                ; test if the selected byte is NULL
+        je      strlen_done             ; if NULL, jump to the end of the loop and return
+        inc     rax                     ; not NULL, so we increment and check the next byte
+        jmp     strlen_inc              ; jump back to the start of the loop
+    strlen_done:
+        ret
+
+; write the content type header for the currently loaded file
+write_content_type_header:
+    mov     rdi, path_filename        ; move the currently loaded file into rdi
+    call    strlen                      ; get the length of the filename in rax
+    push    rax                         ; save strlen for later use
+
+    ; find the file extension. seek back until we find a '.' or until we get to the end of the string
+    write_content_type_header_loop:
+        ; if we've gotten to the beginning of the string (rax == 0), then we jump to the not found portion of the loop
+        test    rax, rax    ; check if rax == 0
+        je      write_content_type_header_loop_not_found
+
+        ; if we're not at the beginning of the string, we'll check if the current byte is a '.'
+        dec     rax                                     ; dec rax to go back 1 byte since we're not at the beginning of the string
+        cmp     byte [path_filename + rax], '.'         ; check if current character is a '.'
+        je      write_content_type_header_loop_found    ; we found the '.', check the file extension
+
+        jmp     write_content_type_header_loop          ; file extension hasnt been found yet, try again
+
+    write_content_type_header_loop_found:
+        ; file extension was found, try to match it to a known extension
+        inc     rax         ; increment rax so that we're not pointing at the '.'
+        pop     rdi         ; pop filepath strlen into rdi
+        sub     rdi, rax    ; get the length of the file extension by doing (filename_len - start_of_extension_index) and store it in rdi
+
+        cmp     rdi, 3      ; check if the extension length is 3
+        je      write_content_type_header_3
+
+        cmp     rdi, 4      ; check if the extension length is 4
+        je      write_content_type_header_4
+
+        ; extension doesn't match any known lengths; default to html
+        jmp     write_content_type_header_loop_not_found
+
+    write_content_type_header_3:
+        ; FILE EXTENSIONS THAT ARE 3 LONG
+
+        ; CSS
+        mov     rcx, 3                          ; length to compare
+        lea     rsi, [path_filename + rax]                        ; str1 in rsi
+        mov     rdi, file_extension_css         ; str2 (CSS) in rdi
+        repe    cmpsb                           ; compare null terminated strings
+        je      write_content_type_header_css   ; is CSS
+
+        ; ICO
+        mov     rcx, 3                          ; length to compare
+        lea     rsi, [path_filename + rax]                        ; str1 in rsi
+        mov     rdi, file_extension_ico         ; str2 (ico) in rdi
+        repe    cmpsb                           ; compare null terminated strings
+        je      write_content_type_header_ico   ; is ico
+
+        ; if we get here, nothing matched, so we default to html
+        jmp     write_content_type_header_loop_not_found
+
+    write_content_type_header_4:
+        ; FILE EXTENSIONS THAT ARE 4 LONG
+
+        ; HTML
+        mov     rcx, 4                          ; length to compare
+        lea     rsi, [path_filename + rax]                        ; str1 in rsi
+        mov     rdi, file_extension_html        ; str2 (HTML) in rdi
+        repe    cmpsb                           ; compare null terminated strings
+        je      write_content_type_header_html  ; is HTML
+
+        ; if we get here, nothing matched, so we default to html
+        jmp     write_content_type_header_loop_not_found
+
+    write_content_type_header_html:
+        mov     rsi, content_type_html
+        mov     rdx, content_type_html_len
+        jmp     write_content_type_to_sock
+
+    write_content_type_header_css:
+        mov     rsi, content_type_css
+        mov     rdx, content_type_css_len
+        jmp     write_content_type_to_sock
+
+    write_content_type_header_ico:
+        mov     rsi, content_type_ico
+        mov     rdx, content_type_ico_len
+        jmp     write_content_type_to_sock
+
+    write_content_type_header_loop_not_found:
+        ; file extension not found, just use text/html
+        pop     rax                         ; remove the strlen from the stack
+        mov     rsi, content_type_html      ; text/html content type
+        mov     rdx, content_type_html_len  ; text/html content type length
+
+    write_content_type_to_sock:
+        mov     rax, [accepted_sock_fd]     ; socket fd
+        call    sock_write                  ; write to the socket
+        ret
 
 ; bind a socket to localhost at a specific port. exits on error
 ; inputs:
@@ -437,56 +561,59 @@ _start:
     call print_server_ready_msg         ; print the server ready message
 
     connection_loop:
-        mov     rax, [original_sock_fd] ; put the socket fd into rax
-        call    sock_accept             ; accept incoming connections
-        mov     [accepted_sock_fd], rax ; move new fd into accepted_sock_fd
+        mov     rax, [original_sock_fd]     ; put the socket fd into rax
+        call    sock_accept                 ; accept incoming connections
+        mov     [accepted_sock_fd], rax     ; move new fd into accepted_sock_fd
 
         ; read from socket into client_read_buffer
-        mov     rax, 0                  ; read
-        mov     rdi, [accepted_sock_fd] ; new socket fd
-        mov     rsi, client_read_buffer ; buffer to read into
-        mov     rdx, BUFFER_READ_SIZE   ; amount of bytes to read
+        mov     rax, 0                      ; read
+        mov     rdi, [accepted_sock_fd]     ; new socket fd
+        mov     rsi, client_read_buffer     ; buffer to read into
+        mov     rdx, BUFFER_READ_SIZE       ; amount of bytes to read
         syscall
 
-        mov     rdi, 5                  ; error code for sock_read
-        test    rax, rax                ; test rax
-        js      exit                    ; if rax == -1; exit
+        mov     rdi, 5                      ; error code for sock_read
+        test    rax, rax                    ; test rax
+        js      exit                        ; if rax == -1; exit
 
-        mov     rsi, client_read_buffer ; the headers we recieved from the client
-        call    print_first_line        ; print the first line for logging purposes
+        mov     rsi, client_read_buffer     ; the headers we recieved from the client
+        call    print_first_line            ; print the first line for logging purposes
 
-        mov     rdi, client_read_buffer
-        call    parse_filename_from_get
+        mov     rdi, client_read_buffer     ; store the buffer that we read from the client into rdi
+        call    parse_filename_from_get     ; parse out the filename that the client sent
 
-        mov     rdi, path_filename      ; the filename to respond with
-        call    read_file               ; read the file. rax is contents buffer, rsi is size of buffer. rdi is the size of the pages allocated
+        mov     rdi, path_filename          ; move the filename to rdi
+        call    read_file                   ; read the file. rax is contents buffer, rsi is size of buffer. rdi is the size of the pages allocated
 
-        mov     r13, rax                ; preserve values
+        mov     r13, rax                    ; preserve values
         mov     r14, rsi
         mov     r15, rdi
 
          ; write response headers to socket
-        mov     rsi, http_200_resp      ; http 200 response
-        mov     rdx, http_200_resp_len  ; http 200 response length
-        mov     rax, [accepted_sock_fd] ; socket fd
-        call    sock_write              ; write to the socket
+        mov     rsi, http_200_resp          ; http 200 response
+        mov     rdx, http_200_resp_len      ; http 200 response length
+        mov     rax, [accepted_sock_fd]     ; socket fd
+        call    sock_write                  ; write to the socket
 
-        mov     rdx, r14                ; size of the file buffer
-        mov     rsi, r13                ; the file buffer address
-        mov     rbx, r15                ; save the size of the pages
-        mov     rax, [accepted_sock_fd] ; socket fd
-        call    sock_write              ; write to the socket
+        ; write the Content-Type header
+        call    write_content_type_header
+
+        mov     rdx, r14                    ; size of the file buffer
+        mov     rsi, r13                    ; the file buffer address
+        mov     rbx, r15                    ; save the size of the pages
+        mov     rax, [accepted_sock_fd]     ; socket fd
+        call    sock_write                  ; write to the socket
 
         ; unmap the memory from the file since we're done
-        mov     rax, 11                 ; munmap
-        mov     rdi, rsi                ; the address of the buffer
-        mov     rsi, rbx                ; the length
+        mov     rax, 11                     ; munmap
+        mov     rdi, rsi                    ; the address of the buffer
+        mov     rsi, rbx                    ; the length
         syscall
 
-        mov     rax, [accepted_sock_fd] ; put socket fd into rax
-        call    sock_close              ; close the new socket file descriptor
+        mov     rax, [accepted_sock_fd]     ; put socket fd into rax
+        call    sock_close                  ; close the new socket file descriptor
 
-        jmp     connection_loop         ; accept more connections
+        jmp     connection_loop             ; accept more connections
 
 ; throw a 404 error and return to accepting connections
 error_404:
