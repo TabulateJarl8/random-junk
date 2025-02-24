@@ -1,5 +1,56 @@
 bits 64
 
+; Define the data for a particular Mimetype
+; Inputs:
+;   1 : the extension without the `.`, like `html` or `js`
+;   2 : the mimetype of the file, like `text/html` or `application/json`
+%macro DEFINE_EXTENSION 2
+    file_extension_%1       db "%1", 0                              ; file extension
+    content_type_%1         db "Content-Type: ", %2, 0xa, 0xa       ; file type Content-Type header
+    content_type_%1_len     equ $ - content_type_%1                 ; length of the Content-Type header for this file
+%endmacro
+
+; Check if the requested file matches a given extension
+; Inputs:
+;   1 : the file extension to check, like `html` or `js`
+%macro CHECK_FILE_EXTENSION 1
+    mov     rcx, %+%strlen(%1)              ; move the length of the filetype into rcx. this is the max length to compare
+    lea     rsi, [path_filename + rax]      ; load the address of the start of the file extension into rsi
+    mov     rdi, file_extension_%1          ; load the expected file extension into rdi
+    repe    cmpsb                           ; check if the strings are the same
+    je      write_content_type_header_%1    ; strings are the same, write the appropriate content header
+%endmacro
+
+; Define a content type handler for writing the selected content type to the socket
+; Inputs:
+;   1 : the file extension to generate the handler for, like `html` or `js`
+%macro DEFINE_CONTENT_TYPE_HANDLER 1
+write_content_type_header_%1:
+    mov     rsi, content_type_%1            ; load the content type for the specific file into rsi
+    mov     rdx, content_type_%1_len        ; load the length of the content type header into rdx
+    jmp     write_content_type_to_sock      ; write the content type header to the socket
+%endmacro
+
+; Generate the checking code for multiple extensions of the same length
+; Inputs:
+;   1 : the length to check, like `3`
+;   + : one or more extensions of the specified length, like `png`, `jpg`, etc.
+%macro CHECK_EXTENSIONS_OF_LENGTH 1-*
+    cmp         rdi, %1                     ; check that the file extension length in rdi matches the expected length
+    jne         %%next_length               ; extension length doesn't match, check the next possible length
+
+    %rotate 1                               ; skip the length param
+    %rep %0-1                               ; for each extension that was provided:
+        CHECK_FILE_EXTENSION %1             ; code for checking if the file extension matches
+    %rotate 1                               ; next extension
+    %endrep
+
+    jmp write_content_type_header_loop_not_found    ; no extensions matched, jump to not found
+
+    %%next_length:
+%endmacro
+
+
 section .data
     server_ready_msg_pt1 db "Bound and listening on http://127.0.0.1:"
     server_ready_msg_pt1_len equ $ - server_ready_msg_pt1
@@ -23,46 +74,19 @@ section .data
     http_200_resp_len equ $ - http_200_resp
 
     ; CONTENT TYPE DEFINITIONS
-    content_type_html       db "Content-Type: text/html", 0xa, 0xa
-    content_type_html_len   equ $ - content_type_html
-    content_type_css        db "Content-Type: text/css", 0xa, 0xa
-    content_type_css_len    equ $ - content_type_css
-    content_type_js         db "Content-Type: text/javascript", 0xa, 0xa
-    content_type_js_len     equ $ - content_type_js
-    content_type_ico        db "Content-Type: image/x-icon", 0xa, 0xa
-    content_type_ico_len    equ $ - content_type_ico
-    content_type_txt        db "Content-Type: text/plain", 0xa, 0xa
-    content_type_txt_len    equ $ - content_type_txt
-    content_type_xml        db "Content-Type: application/xml", 0xa, 0xa
-    content_type_xml_len    equ $ - content_type_xml
-    content_type_pdf        db "Content-Type: application/pdf", 0xa, 0xa
-    content_type_pdf_len    equ $ - content_type_pdf
-    content_type_png        db "Content-Type: image/png", 0xa, 0xa
-    content_type_png_len    equ $ - content_type_png
-    content_type_jpg        db "Content-Type: image/jpg", 0xa, 0xa
-    content_type_jpg_len    equ $ - content_type_jpg
-    content_type_woff       db "Content-Type: font/woff", 0xa, 0xa
-    content_type_woff_len   equ $ - content_type_woff
-    content_type_woff2      db "Content-Type: font/woff2", 0xa, 0xa
-    content_type_woff2_len  equ $ - content_type_woff2
-    content_type_ttf        db "Content-Type: font/ttf", 0xa, 0xa
-    content_type_ttf_len    equ $ - content_type_ttf
-    content_type_svg        db "Content-Type: image/svg+xml", 0xa, 0xa
-    content_type_svg_len    equ $ - content_type_svg
-
-    file_extension_html     db "html", 0
-    file_extension_woff     db "woff", 0
-    file_extension_woff2    db "woff2", 0
-    file_extension_css      db "css", 0
-    file_extension_ico      db "ico", 0
-    file_extension_txt      db "txt", 0
-    file_extension_xml      db "xml", 0
-    file_extension_pdf      db "pdf", 0
-    file_extension_png      db "png", 0
-    file_extension_jpg      db "jpg", 0
-    file_extension_ttf      db "ttf", 0
-    file_extension_svg      db "svg", 0
-    file_extension_js       db "js", 0
+    DEFINE_EXTENSION html, "text/html"
+    DEFINE_EXTENSION css, "text/css"
+    DEFINE_EXTENSION js, "text/javascript"
+    DEFINE_EXTENSION ico, "image/x-icon"
+    DEFINE_EXTENSION txt, "text/plain"
+    DEFINE_EXTENSION xml, "application/xml"
+    DEFINE_EXTENSION pdf, "application/pdf"
+    DEFINE_EXTENSION png, "image/png"
+    DEFINE_EXTENSION jpg, "image/jpg"
+    DEFINE_EXTENSION woff, "font/woff"
+    DEFINE_EXTENSION woff2, "font/woff2"
+    DEFINE_EXTENSION ttf, "font/ttf"
+    DEFINE_EXTENSION svg, "image/svg+xml"
 
     ; ERROR RESPONSE DEFINITIONS
     http_400_resp:
@@ -348,197 +372,27 @@ write_content_type_header:
                             ; rdi already contains the length
         sub     rdi, rax    ; get the length of the file extension by doing (filename_len - start_of_extension_index) and store it in rdi
 
-        cmp     rdi, 2      ; check if the extension length is 2
-        je      write_content_type_header_2
-
-        cmp     rdi, 3      ; check if the extension length is 3
-        je      write_content_type_header_3
-
-        cmp     rdi, 4      ; check if the extension length is 4
-        je      write_content_type_header_4
-
-        cmp     rdi, 5      ; check if the extension length is 5
-        je      write_content_type_header_5
+        CHECK_EXTENSIONS_OF_LENGTH 2, js
+        CHECK_EXTENSIONS_OF_LENGTH 3, css, ico, txt, xml, pdf, png, jpg, ttf, svg
+        CHECK_EXTENSIONS_OF_LENGTH 4, html, woff
+        CHECK_EXTENSIONS_OF_LENGTH 5, woff2
 
         ; extension doesn't match any known lengths; default to html
         jmp     write_content_type_header_loop_not_found
 
-    write_content_type_header_2:
-        ; FILE EXTENSIONS THAT ARE 2 LONG
-
-        ; JS
-        mov     rcx, 2                          ; length to compare
-        lea     rsi, [path_filename + rax]                        ; str1 in rsi
-        mov     rdi, file_extension_js         ; str2 (js) in rdi
-        repe    cmpsb                           ; compare null terminated strings
-        je      write_content_type_header_js   ; is js
-
-        ; if we get here, nothing matched, so we default to html
-        jmp     write_content_type_header_loop_not_found
-
-    write_content_type_header_3:
-        ; FILE EXTENSIONS THAT ARE 3 LONG
-
-        ; CSS
-        mov     rcx, 3                          ; length to compare
-        lea     rsi, [path_filename + rax]                        ; str1 in rsi
-        mov     rdi, file_extension_css         ; str2 (CSS) in rdi
-        repe    cmpsb                           ; compare null terminated strings
-        je      write_content_type_header_css   ; is CSS
-
-        ; ICO
-        mov     rcx, 3                          ; length to compare
-        lea     rsi, [path_filename + rax]                        ; str1 in rsi
-        mov     rdi, file_extension_ico         ; str2 (ico) in rdi
-        repe    cmpsb                           ; compare null terminated strings
-        je      write_content_type_header_ico   ; is ico
-
-        ; TXT
-        mov     rcx, 3                          ; length to compare
-        lea     rsi, [path_filename + rax]                        ; str1 in rsi
-        mov     rdi, file_extension_txt         ; str2 (txt) in rdi
-        repe    cmpsb                           ; compare null terminated strings
-        je      write_content_type_header_txt   ; is txt
-
-        ; XML
-        mov     rcx, 3                          ; length to compare
-        lea     rsi, [path_filename + rax]                        ; str1 in rsi
-        mov     rdi, file_extension_xml         ; str2 (xml) in rdi
-        repe    cmpsb                           ; compare null terminated strings
-        je      write_content_type_header_xml   ; is xml
-
-        ; PDF
-        mov     rcx, 3                          ; length to compare
-        lea     rsi, [path_filename + rax]                        ; str1 in rsi
-        mov     rdi, file_extension_pdf         ; str2 (pdf) in rdi
-        repe    cmpsb                           ; compare null terminated strings
-        je      write_content_type_header_pdf   ; is pdf
-
-        ; PNG
-        mov     rcx, 3                          ; length to compare
-        lea     rsi, [path_filename + rax]                        ; str1 in rsi
-        mov     rdi, file_extension_png         ; str2 (png) in rdi
-        repe    cmpsb                           ; compare null terminated strings
-        je      write_content_type_header_png   ; is png
-
-        ; JPG
-        mov     rcx, 3                          ; length to compare
-        lea     rsi, [path_filename + rax]                        ; str1 in rsi
-        mov     rdi, file_extension_jpg         ; str2 (jpg) in rdi
-        repe    cmpsb                           ; compare null terminated strings
-        je      write_content_type_header_jpg   ; is jpg
-
-        ; TTF
-        mov     rcx, 3                          ; length to compare
-        lea     rsi, [path_filename + rax]                        ; str1 in rsi
-        mov     rdi, file_extension_ttf         ; str2 (ttf) in rdi
-        repe    cmpsb                           ; compare null terminated strings
-        je      write_content_type_header_ttf   ; is ttf
-
-        ; SVG
-        mov     rcx, 3                          ; length to compare
-        lea     rsi, [path_filename + rax]                        ; str1 in rsi
-        mov     rdi, file_extension_svg         ; str2 (svg) in rdi
-        repe    cmpsb                           ; compare null terminated strings
-        je      write_content_type_header_svg   ; is svg
-
-        ; if we get here, nothing matched, so we default to html
-        jmp     write_content_type_header_loop_not_found
-
-    write_content_type_header_4:
-        ; FILE EXTENSIONS THAT ARE 4 LONG
-
-        ; HTML
-        mov     rcx, 4                          ; length to compare
-        lea     rsi, [path_filename + rax]                        ; str1 in rsi
-        mov     rdi, file_extension_html        ; str2 (HTML) in rdi
-        repe    cmpsb                           ; compare null terminated strings
-        je      write_content_type_header_html  ; is HTML
-
-        ; HTML
-        mov     rcx, 4                          ; length to compare
-        lea     rsi, [path_filename + rax]                        ; str1 in rsi
-        mov     rdi, file_extension_woff        ; str2 (woff) in rdi
-        repe    cmpsb                           ; compare null terminated strings
-        je      write_content_type_header_woff  ; is woff
-
-        ; if we get here, nothing matched, so we default to html
-        jmp     write_content_type_header_loop_not_found
-
-    write_content_type_header_5:
-        ; FILE EXTENSIONS THAT ARE 5 LONG
-
-        ; woff2
-        mov     rcx, 5                          ; length to compare
-        lea     rsi, [path_filename + rax]                        ; str1 in rsi
-        mov     rdi, file_extension_woff2        ; str2 (woff2) in rdi
-        repe    cmpsb                           ; compare null terminated strings
-        je      write_content_type_header_woff2  ; is woff2
-
-    write_content_type_header_js:
-        mov     rsi, content_type_js
-        mov     rdx, content_type_js_len
-        jmp     write_content_type_to_sock
-
-    write_content_type_header_ttf:
-        mov     rsi, content_type_ttf
-        mov     rdx, content_type_ttf_len
-        jmp     write_content_type_to_sock
-
-    write_content_type_header_svg:
-        mov     rsi, content_type_svg
-        mov     rdx, content_type_svg_len
-        jmp     write_content_type_to_sock
-
-    write_content_type_header_html:
-        mov     rsi, content_type_html
-        mov     rdx, content_type_html_len
-        jmp     write_content_type_to_sock
-
-    write_content_type_header_woff:
-        mov     rsi, content_type_woff
-        mov     rdx, content_type_woff_len
-        jmp     write_content_type_to_sock
-
-    write_content_type_header_woff2:
-        mov     rsi, content_type_woff2
-        mov     rdx, content_type_woff2_len
-        jmp     write_content_type_to_sock
-
-    write_content_type_header_css:
-        mov     rsi, content_type_css
-        mov     rdx, content_type_css_len
-        jmp     write_content_type_to_sock
-
-    write_content_type_header_jpg:
-        mov     rsi, content_type_jpg
-        mov     rdx, content_type_jpg_len
-        jmp     write_content_type_to_sock
-
-    write_content_type_header_ico:
-        mov     rsi, content_type_ico
-        mov     rdx, content_type_ico_len
-        jmp     write_content_type_to_sock
-
-    write_content_type_header_txt:
-        mov     rsi, content_type_txt
-        mov     rdx, content_type_txt_len
-        jmp     write_content_type_to_sock
-
-    write_content_type_header_xml:
-        mov     rsi, content_type_xml
-        mov     rdx, content_type_xml_len
-        jmp     write_content_type_to_sock
-
-    write_content_type_header_pdf:
-        mov     rsi, content_type_pdf
-        mov     rdx, content_type_pdf_len
-        jmp     write_content_type_to_sock
-
-    write_content_type_header_png:
-        mov     rsi, content_type_png
-        mov     rdx, content_type_png_len
-        jmp     write_content_type_to_sock
+    DEFINE_CONTENT_TYPE_HANDLER js
+    DEFINE_CONTENT_TYPE_HANDLER css
+    DEFINE_CONTENT_TYPE_HANDLER ico
+    DEFINE_CONTENT_TYPE_HANDLER txt
+    DEFINE_CONTENT_TYPE_HANDLER xml
+    DEFINE_CONTENT_TYPE_HANDLER pdf
+    DEFINE_CONTENT_TYPE_HANDLER png
+    DEFINE_CONTENT_TYPE_HANDLER jpg
+    DEFINE_CONTENT_TYPE_HANDLER ttf
+    DEFINE_CONTENT_TYPE_HANDLER svg
+    DEFINE_CONTENT_TYPE_HANDLER html
+    DEFINE_CONTENT_TYPE_HANDLER woff
+    DEFINE_CONTENT_TYPE_HANDLER woff2
 
     write_content_type_header_loop_not_found:
         ; file extension not found, just use text/html
