@@ -5,7 +5,7 @@ bits 64
 ;   1 : the extension without the `.`, like `html` or `js`
 ;   2 : the mimetype of the file, like `text/html` or `application/json`
 %macro DEFINE_EXTENSION 2
-    file_extension_%1       db "%1", 0                              ; file extension
+    file_extension_%1       db %str(%1), 0                              ; file extension
     content_type_%1         db "Content-Type: ", %2, 0xa, 0xa       ; file type Content-Type header
     content_type_%1_len     equ $ - content_type_%1                 ; length of the Content-Type header for this file
 %endmacro
