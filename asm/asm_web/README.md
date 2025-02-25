@@ -26,7 +26,8 @@ I was bored and wanted to write some more assembly so I decided a web server wou
       | `.xml`    | `application/xml` |
       | `.pdf`    | `application/pdf` |
       | `.png`    | `image/png`       |
-      | `.jpg`    | `image/jpg`       |
+      | `.jpg`    | `image/jepg`      |
+      | `.jpeg`   | `image/jepg`      |
       | `.svg`    | `image/svg+xml`   |
 
 - `web_server_better.asm` - this contains a super cool and super complex web server that just runs `nginx`, as suggested by a member of the JMU Unix Users Group.
