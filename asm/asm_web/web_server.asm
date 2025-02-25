@@ -82,7 +82,8 @@ section .data
     DEFINE_EXTENSION xml, "application/xml"
     DEFINE_EXTENSION pdf, "application/pdf"
     DEFINE_EXTENSION png, "image/png"
-    DEFINE_EXTENSION jpg, "image/jpg"
+    DEFINE_EXTENSION jpg, "image/jpeg"
+    DEFINE_EXTENSION jpeg, "image/jpeg"
     DEFINE_EXTENSION woff, "font/woff"
     DEFINE_EXTENSION woff2, "font/woff2"
     DEFINE_EXTENSION ttf, "font/ttf"
@@ -377,7 +378,7 @@ write_content_type_header:
 
         CHECK_EXTENSIONS_OF_LENGTH 2, js
         CHECK_EXTENSIONS_OF_LENGTH 3, css, ico, txt, xml, pdf, png, jpg, ttf, svg
-        CHECK_EXTENSIONS_OF_LENGTH 4, html, woff
+        CHECK_EXTENSIONS_OF_LENGTH 4, html, woff, jpeg
         CHECK_EXTENSIONS_OF_LENGTH 5, woff2
 
         ; extension doesn't match any known lengths; default to html
@@ -391,6 +392,7 @@ write_content_type_header:
     DEFINE_CONTENT_TYPE_HANDLER pdf
     DEFINE_CONTENT_TYPE_HANDLER png
     DEFINE_CONTENT_TYPE_HANDLER jpg
+    DEFINE_CONTENT_TYPE_HANDLER jpeg
     DEFINE_CONTENT_TYPE_HANDLER ttf
     DEFINE_CONTENT_TYPE_HANDLER svg
     DEFINE_CONTENT_TYPE_HANDLER html
