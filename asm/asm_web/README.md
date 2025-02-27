@@ -13,22 +13,25 @@ I was bored and wanted to write some more assembly so I decided a web server wou
 
     - Supported filetypes:
 
-      | Extension | Mimetype          |
-      | --------- | ----------------- |
-      | `.html`   | `text/html`       |
-      | `.woff`   | `font/woff`       |
-      | `.woff2`  | `font/woff2`      |
-      | `.ttf`    | `font/ttf`        |
-      | `.css`    | `text/css`        |
-      | `.js`     | `text/javascript` |
-      | `.ico`    | `image/x-icon`    |
-      | `.txt`    | `text/plain`      |
-      | `.xml`    | `application/xml` |
-      | `.pdf`    | `application/pdf` |
-      | `.png`    | `image/png`       |
-      | `.jpg`    | `image/jepg`      |
-      | `.jpeg`   | `image/jepg`      |
-      | `.svg`    | `image/svg+xml`   |
+      | Extension | Mimetype           |
+      | --------- | ------------------ |
+      | `.html`   | `text/html`        |
+      | `.woff`   | `font/woff`        |
+      | `.woff2`  | `font/woff2`       |
+      | `.ttf`    | `font/ttf`         |
+      | `.css`    | `text/css`         |
+      | `.js`     | `text/javascript`  |
+      | `.ico`    | `image/x-icon`     |
+      | `.txt`    | `text/plain`       |
+      | `.xml`    | `application/xml`  |
+      | `.pdf`    | `application/pdf`  |
+      | `.png`    | `image/png`        |
+      | `.jpg`    | `image/jepg`       |
+      | `.jpeg`   | `image/jepg`       |
+      | `.svg`    | `image/svg+xml`    |
+      | `.json`   | `application/json` |
+      | `.mp4`    | `video/mp4`        |
+      | `.mp3`    | `audio/mp3`        |
 
 - `web_server_better.asm` - this contains a super cool and super complex web server that just runs `nginx`, as suggested by a member of the JMU Unix Users Group.
 

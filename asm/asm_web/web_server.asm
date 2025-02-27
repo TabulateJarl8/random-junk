@@ -88,6 +88,9 @@ section .data
     DEFINE_EXTENSION woff2, "font/woff2"
     DEFINE_EXTENSION ttf, "font/ttf"
     DEFINE_EXTENSION svg, "image/svg+xml"
+    DEFINE_EXTENSION json, "application/json"
+    DEFINE_EXTENSION mp4, "video/mp4"
+    DEFINE_EXTENSION mp3, "audio/mp3"
 
     content_type_octet_stream         db "Content-Type: application/octet-stream", 0xa, 0xa
     content_type_octet_stream_len     equ $ - content_type_octet_stream
@@ -377,8 +380,8 @@ write_content_type_header:
         sub     rdi, rax    ; get the length of the file extension by doing (filename_len - start_of_extension_index) and store it in rdi
 
         CHECK_EXTENSIONS_OF_LENGTH 2, js
-        CHECK_EXTENSIONS_OF_LENGTH 3, css, ico, txt, xml, pdf, png, jpg, ttf, svg
-        CHECK_EXTENSIONS_OF_LENGTH 4, html, woff, jpeg
+        CHECK_EXTENSIONS_OF_LENGTH 3, css, ico, txt, xml, pdf, png, jpg, ttf, svg, mp3, mp4
+        CHECK_EXTENSIONS_OF_LENGTH 4, html, woff, jpeg,  json
         CHECK_EXTENSIONS_OF_LENGTH 5, woff2
 
         ; extension doesn't match any known lengths; default to html
@@ -395,7 +398,10 @@ write_content_type_header:
     DEFINE_CONTENT_TYPE_HANDLER jpeg
     DEFINE_CONTENT_TYPE_HANDLER ttf
     DEFINE_CONTENT_TYPE_HANDLER svg
+    DEFINE_CONTENT_TYPE_HANDLER mp3
+    DEFINE_CONTENT_TYPE_HANDLER mp4
     DEFINE_CONTENT_TYPE_HANDLER html
+    DEFINE_CONTENT_TYPE_HANDLER json
     DEFINE_CONTENT_TYPE_HANDLER woff
     DEFINE_CONTENT_TYPE_HANDLER woff2
 
