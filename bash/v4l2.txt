@@ -1,0 +1,17 @@
+sudo modprobe -r v4l2loopback 
+
+ffmpeg -stream_loop -1 -re -i bl.mkv -vf "scale=1920x1080, hflip" -f v4l2 -pix_fmt yuyv422 /dev/video4
+ffmpeg -stream_loop -1 -i ride.png -vf "scale=1920x1080, hflip" -f v4l2 -pix_fmt yuyv422 /dev/video4
+ffmpeg -f v4l2 -i /dev/video0 -filter:v "transpose=1,transpose=1" -f v4l2 -pix_fmt yuyv422 /dev/video2
+ffmpeg -video_size 1920x1080 -f x11grab -framerate 10 -i :0 -f v4l2 -pix_fmt yuyv422 /dev/video2
+
+sudo modprobe v4l2loopback video_nr=4 exclusive_caps=1
+
+Chromakey:
+10:50PM
+ffmpeg -i my_photo-8.jpg -i /dev/video0 -filter_complex '[1:v]chromakey=0x00ff00:similarity=0.334[ckout];[0:v][ckout]overlay,crop=640:480:0:0[out]' -map '[out]' -f v4l2 -pix_fmt yuyv422 /dev/video2
+
+8:55AM - 0.328
+2:00PM - 0.36
+
+ffmpeg -f v4l2 -i /dev/video0 -i green.png -filter_complex "[1:v]format=argb,geq=r='r(X,Y)':a='0.50*alpha(X,Y)'[zork];[0:v][zork]overlay" -f v4l2 -pix_fmt yuyv422 /dev/video2
