@@ -2,6 +2,9 @@
 // you've ever made. Don't just the code because it's mostly cobbled together
 // from various LLMs since I was too lazy to write this myself
 //
+// I would highly recommend filtering to yourself with `-e you@email.com`. See
+// --help for more info
+//
 // gcc -o find_largest_commit find-largest-commit.c -lgit2 -lpthread
 
 #include <dirent.h>
