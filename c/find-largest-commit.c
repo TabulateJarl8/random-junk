@@ -16,8 +16,8 @@
 #include <unistd.h>
 
 #define MAX_PATH 4096
-#define NUM_WORKERS 12
-#define TOP_N 3
+#define DEFAULT_NUM_WORKERS 12
+#define DEFAULT_TOP_N 3
 #define MAX_FILTERS 100
 #define MAX_EXCLUSIONS 1000
 
@@ -43,13 +43,15 @@ typedef struct {
   char **excluded_hashes;
   int excluded_hash_count;
   char *base_path;
+  int num_workers;
+  int top_n;
 } Config;
 
 RepoQueue queue = {NULL, PTHREAD_MUTEX_INITIALIZER};
-CommitInfo global_biggest[TOP_N] = {{"", "", 0}, {"", "", 0}, {"", "", 0}};
+CommitInfo *global_biggest = NULL;
 pthread_mutex_t global_lock = PTHREAD_MUTEX_INITIALIZER;
-volatile char current_repo[NUM_WORKERS][MAX_PATH];
-Config config = {NULL, 0, NULL, 0, NULL};
+volatile char **current_repo = NULL;
+Config config = {NULL, 0, NULL, 0, NULL, DEFAULT_NUM_WORKERS, DEFAULT_TOP_N};
 
 volatile int repos_done = 0;
 int repos_total = 0;
@@ -62,9 +64,15 @@ void print_usage(const char *program_name) {
   printf("  -x, --exclude HASH    Exclude commit hash (can be used multiple "
          "times)\n");
   printf("  -p, --path PATH       Base path to search (default: ~/src)\n");
+  printf("  -w, --workers NUM     Number of worker threads (default: %d)\n",
+         DEFAULT_NUM_WORKERS);
+  printf(
+      "  -n, --top NUM         Number of top commits to show (default: %d)\n",
+      DEFAULT_TOP_N);
   printf("  -h, --help           Show this help message\n");
   printf("\nExample:\n");
-  printf("  %s -e user1@example.com -e user2@example.com -x abc123 -x def456\n",
+  printf("  %s -e user1@example.com -e user2@example.com -x abc123 -x def456 "
+         "-w 8 -n 5\n",
          program_name);
 }
 
@@ -98,10 +106,13 @@ void parse_args(int argc, char **argv) {
   static struct option long_options[] = {{"email", required_argument, 0, 'e'},
                                          {"exclude", required_argument, 0, 'x'},
                                          {"path", required_argument, 0, 'p'},
+                                         {"workers", required_argument, 0, 'w'},
+                                         {"top", required_argument, 0, 'n'},
                                          {"help", no_argument, 0, 'h'},
                                          {0, 0, 0, 0}};
 
-  while ((opt = getopt_long(argc, argv, "e:x:p:h", long_options, NULL)) != -1) {
+  while ((opt = getopt_long(argc, argv, "e:x:p:w:n:h", long_options, NULL)) !=
+         -1) {
     switch (opt) {
     case 'e':
       add_email_filter(optarg);
@@ -112,6 +123,20 @@ void parse_args(int argc, char **argv) {
     case 'p':
       config.base_path = strdup(optarg);
       break;
+    case 'w':
+      config.num_workers = atoi(optarg);
+      if (config.num_workers <= 0) {
+        fprintf(stderr, "Error: Number of workers must be positive\n");
+        exit(1);
+      }
+      break;
+    case 'n':
+      config.top_n = atoi(optarg);
+      if (config.top_n <= 0) {
+        fprintf(stderr, "Error: Number of top commits must be positive\n");
+        exit(1);
+      }
+      break;
     case 'h':
       print_usage(argv[0]);
       exit(0);
@@ -119,6 +144,12 @@ void parse_args(int argc, char **argv) {
       print_usage(argv[0]);
       exit(1);
     }
+  }
+
+  // Set default email filters if none provided
+  if (config.email_filter_count == 0) {
+    add_email_filter("tabulatejarl8@gmail.com");
+    add_email_filter("samplejc@dukes.jmu.edu");
   }
 
   // Set default base path if none provided
@@ -146,6 +177,17 @@ void cleanup_config() {
   free(config.excluded_hashes);
 
   free(config.base_path);
+
+  if (global_biggest) {
+    free(global_biggest);
+  }
+
+  if (current_repo) {
+    for (int i = 0; i < config.num_workers; i++) {
+      free((void *)current_repo[i]);
+    }
+    free(current_repo);
+  }
 }
 
 void enqueue_repo(const char *path) {
@@ -188,7 +230,7 @@ void *spinner(void *arg) {
     printf("[%c] Progress: %d / %d\n", spin_chars[spin_idx], repos_done,
            repos_total);
 
-    for (int i = 0; i < NUM_WORKERS; i++) {
+    for (int i = 0; i < config.num_workers; i++) {
       if (current_repo[i][0] != '\0') {
         printf("  Thread %d: Processing %-60s\n", i, current_repo[i]);
       } else {
@@ -307,7 +349,7 @@ void update_top_commits(CommitInfo *local_biggest) {
 
   // Find the position to insert
   int insert_pos = -1;
-  for (int i = 0; i < TOP_N; i++) {
+  for (int i = 0; i < config.top_n; i++) {
     if (local_biggest->additions > global_biggest[i].additions) {
       insert_pos = i;
       break;
@@ -316,7 +358,7 @@ void update_top_commits(CommitInfo *local_biggest) {
 
   if (insert_pos != -1) {
     // Shift commits down
-    for (int i = TOP_N - 1; i > insert_pos; i--) {
+    for (int i = config.top_n - 1; i > insert_pos; i--) {
       global_biggest[i] = global_biggest[i - 1];
     }
     // Insert new commit
@@ -414,10 +456,20 @@ void *worker(void *arg) {
 int main(int argc, char **argv) {
   parse_args(argc, argv);
 
+  // Initialize dynamic arrays based on configuration
+  global_biggest = calloc(config.top_n, sizeof(CommitInfo));
+  current_repo = malloc(config.num_workers * sizeof(char *));
+  for (int i = 0; i < config.num_workers; i++) {
+    current_repo[i] = calloc(MAX_PATH, sizeof(char));
+  }
+
   git_libgit2_init();
 
-  printf("Scanning path: %s\n", config.base_path);
-  printf("Email filters: ");
+  printf("Configuration:\n");
+  printf("  Base path: %s\n", config.base_path);
+  printf("  Workers: %d\n", config.num_workers);
+  printf("  Top commits: %d\n", config.top_n);
+  printf("  Email filters: ");
   for (int i = 0; i < config.email_filter_count; i++) {
     printf("%s%s", config.email_filters[i],
            i < config.email_filter_count - 1 ? ", " : "");
@@ -425,7 +477,7 @@ int main(int argc, char **argv) {
   printf("\n");
 
   if (config.excluded_hash_count > 0) {
-    printf("Excluded hashes: ");
+    printf("  Excluded hashes: ");
     for (int i = 0; i < config.excluded_hash_count; i++) {
       printf("%s%s", config.excluded_hashes[i],
              i < config.excluded_hash_count - 1 ? ", " : "");
@@ -446,21 +498,21 @@ int main(int argc, char **argv) {
   pthread_t spinner_thread;
   pthread_create(&spinner_thread, NULL, spinner, NULL);
 
-  pthread_t threads[NUM_WORKERS];
-  int ids[NUM_WORKERS];
-  for (int i = 0; i < NUM_WORKERS; i++) {
+  pthread_t *threads = malloc(config.num_workers * sizeof(pthread_t));
+  int *ids = malloc(config.num_workers * sizeof(int));
+  for (int i = 0; i < config.num_workers; i++) {
     ids[i] = i;
     pthread_create(&threads[i], NULL, worker, &ids[i]);
   }
 
-  for (int i = 0; i < NUM_WORKERS; i++) {
+  for (int i = 0; i < config.num_workers; i++) {
     pthread_join(threads[i], NULL);
   }
 
   pthread_join(spinner_thread, NULL);
 
-  printf("\nTop %d biggest commits:\n", TOP_N);
-  for (int i = 0; i < TOP_N; i++) {
+  printf("\nTop %d biggest commits:\n", config.top_n);
+  for (int i = 0; i < config.top_n; i++) {
     if (global_biggest[i].additions > 0) {
       printf("%d. Repo: %s\n", i + 1, global_biggest[i].repo_path);
       printf("   Commit: %s\n", global_biggest[i].commit_hash);
@@ -468,6 +520,8 @@ int main(int argc, char **argv) {
     }
   }
 
+  free(threads);
+  free(ids);
   cleanup_config();
   git_libgit2_shutdown();
   return 0;
