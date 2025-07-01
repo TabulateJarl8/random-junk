@@ -12,11 +12,69 @@ function show_help() {
     echo "    -h: Show this message and exit"
     echo "    -l: Lockdown Browser installer path"
     echo "    -w: Wine Prefix of where to install lockdown browser"
+    echo "    -m: either 32 or 64 for 32-bit or 64-bit mode. Default: 64-bit. You more than likely don't need to touch this flag"
     exit 0
 }
 
 function is_valid_dimension() {
     [[ $1 =~ ^[0-9]+$ ]] && [ "$1" -gt 0 ]
+}
+
+function determine_scaled_dpi() {
+    local desired_scale=1.0
+    local dpi
+    local scale
+    local text_scale
+
+    # 1. try Xresources DPI
+    if command -v xrdb >/dev/null 2>&1; then
+        dpi=$(xrdb -query | awk '/Xft.dpi:/ {print $2}')
+        if [ -n "$dpi" ]; then
+            desired_scale=$(awk "BEGIN {printf \"%.2f\", $dpi / 96}")
+        fi
+    fi
+
+    # 2. try xrandr
+    if [ "$desired_scale" = "1.0" ]; then
+        if command -v xrandr >/dev/null 2>&1; then
+            scale=$(xrandr --verbose | awk '/ connected /,0' | grep -oP 'Scale \K[0-9\.]+')
+            if [ -n "$scale" ]; then
+                desired_scale="$scale"
+            fi
+        fi
+    fi
+
+    # Try KDE screen doctor
+    if [ "$desired_scale" = "1.0" ]; then
+        if command -v kscreen-doctor >/dev/null 2>&1; then
+            scale=$(kscreen-doctor -o | grep Scale | cut -d' ' -f2)
+            if [ -n "$scale" ]; then
+                desired_scale="$scale"
+            fi
+        fi
+    fi
+
+    # Try GNOME settings
+    if [ "$desired_scale" = "1.0" ]; then
+        if command -v gsettings >/dev/null 2>&1; then
+            scale=$(gsettings get org.gnome.desktop.interface scaling-factor 2>/dev/null | tr -d "'")
+            if [ "$scale" -gt 0 ] 2>/dev/null; then
+                desired_scale="$scale"
+            fi
+
+            text_scale=$(gsettings get org.gnome.desktop.interface text-scaling-factor 2>/dev/null)
+            awk "BEGIN {if ($text_scale > $desired_scale) print \"\"$text_scale\"\"}" | grep -q .
+            if [ $? -eq 0 ]; then
+                desired_scale="$text_scale"
+            fi
+        fi
+    fi
+
+    local new_dpi
+    # +0.5 ensures proper rounding in awk
+    new_dpi=$(awk "BEGIN {printf \"%d\", (96 * $desired_scale) + 0.5}")
+
+    printf "0x%x" "$new_dpi"
 }
 
 CYAN="\e[36m"
@@ -35,11 +93,22 @@ fi
 
 unset -v LB_PATH
 unset -v WINE_PREFIX
+WINEARCH=win64
 
-while getopts l:w:h opt; do
+while getopts l:w:m:h opt; do
     case $opt in
     l) LB_PATH=$OPTARG ;;
     w) WINE_PREFIX=$OPTARG ;;
+    m)
+        if [[ "$OPTARG" == "32" ]]; then
+            WINEARCH="win32"
+        elif [[ "$OPTARG" == "64" ]]; then
+            WINEARCH="win64"
+        else
+            echo "Invalid value for -m. Please use 32 or 64."
+            exit 1
+        fi
+        ;;
     h) show_help ;;
     *)
         echo -e "${RED}Error in command line parsing${RESET}" >&2
@@ -125,7 +194,7 @@ chmod +x "$WINETRICKS_PATH"
 
 # export wine variables
 export WINEPREFIX=$WINE_PREFIX
-export WINEARCH=win32
+export WINEARCH=$WINEARCH
 
 # install lockdown browser
 echo -e "${CYAN}Please follow the lockdown browser installation wizard${RESET}"
@@ -164,6 +233,11 @@ else
 fi
 
 $WINETRICKS_PATH vd=$resolution
+
+echo -e "${CYAN}Attempting to set virtual desktop DPI to match scaling factor...${RESET}"
+dpi_hex=$(determine_scaled_dpi)
+echo -e "${CYAN}Detected a DPI of $dpi_hex...${RESET}"
+wine reg add "HKEY_CURRENT_USER\Control Panel\Desktop" /v LogPixels /t REG_DWORD /d ${dpi_hex} /f
 
 echo
 echo -e "${GREEN}Success! ${CYAN}Lockdown Browser should be available in your desktop menu.${RESET}"
