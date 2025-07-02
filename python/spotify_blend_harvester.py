@@ -40,7 +40,7 @@ def retrieve_blend_information() -> list[dict[str, str]]:
     # create device and open spotify's library
     logging.debug("Creating device and opening library")
     d = Device()
-    d(text="Your Library").click()
+    d(descriptionStartsWith="Your Library").click()
 
     done_blends = []
     scroll = True
@@ -84,7 +84,9 @@ def retrieve_blend_information() -> list[dict[str, str]]:
                 logging.warning(f"skipping {blend_title} as it is not visible")
 
             # click on the blend's icon
-            d(resourceId="com.spotify.music:id/circular_video_preview_content_root").click.wait()
+            d(
+                resourceId="com.spotify.music:id/circular_video_preview_content_root"
+            ).click.wait()
 
             # extract percentage from screen
             logging.debug("Extracting blend percentage")
