@@ -5,6 +5,13 @@
 # institution which is requiring the use of lockdown browser, so weigh
 # the pros and cons of just using Windows on a burner laptop/dual boot,
 # as they may try to claim that you are cheating by using it this way
+#
+# UPDATE: The installation from this script works fine for me except
+# for when professors use the "External Web Domains Whitelist" feature.
+# Once you open a whitelisted website from within the exam, Lockdown
+# closes itself and will give you one warning before unjustly permanently
+# banning your user account. Take this into account if your professor
+# makes use of this feature
 #######################################################################
 
 function show_help() {
