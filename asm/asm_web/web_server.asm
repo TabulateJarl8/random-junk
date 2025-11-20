@@ -1,4 +1,5 @@
 bits 64
+DEFAULT ABS
 
 ; Define the data for a particular Mimetype
 ; Inputs:
@@ -426,8 +427,8 @@ sock_bind:
     mov     ax, [port]          ; load port variable
     xchg    al, ah              ; htons(port)
 
-    push    dword   0           ; 4-byte address padding
-    push    dword   0x0100007F  ; 127.0.0.1
+    push    qword   0           ; 4-byte address padding
+    push    qword   0x0100007F  ; 127.0.0.1
     push    ax                  ; port
     push    word    2           ; AF_INET
 
