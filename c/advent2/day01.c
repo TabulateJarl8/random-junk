@@ -33,7 +33,7 @@
 #define DIE(...)                                                               \
   do {                                                                         \
     fprintf(stderr, __VA_ARGS__);                                              \
-    exit(-1);                                                                  \
+    exit(EXIT_FAILURE);                                                        \
   } while (0)
 
 int main(int argc, char *argv[]) {
@@ -50,5 +50,5 @@ int main(int argc, char *argv[]) {
 
     close(fd);
   }
-  return 0;
+  return EXIT_SUCCESS;
 }
