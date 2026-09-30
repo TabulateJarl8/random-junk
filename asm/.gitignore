@@ -4,3 +4,4 @@
 !.gitignore
 *.o
 .gdb_history
+*.out

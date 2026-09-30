@@ -1,0 +1,22 @@
+[default_config]
+version = "0.10.0"
+assembler = "nasm"
+instruction_set = "x86-64"
+
+[default_config.opts]
+compiler = "nasm"
+compile_flags_txt = ["-f", "elf64"]
+diagnostics = true
+default_diagnostics = false
+
+[[project]]
+path = "num_print_riscv.asm"
+version = "0.10.1"
+assembler = "gas"
+instruction_set = "riscv"
+
+[project.opts]
+compiler = "riscv64-linux-gnu-gcc"
+compile_flags_txt = ["-nostdlib", "-x", "assembler"]
+diagnostics = true
+default_diagnostics = false
